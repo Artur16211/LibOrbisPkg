@@ -83,49 +83,49 @@ namespace LibOrbisPkg.PKG
       this.pkg = pkg;
     }
 
-    private Dictionary<GeneralDigest, Tuple<string, string>> GeneralDigests =
-      new Dictionary<GeneralDigest, Tuple<string, string>> {
+    private Dictionary<GeneralDigest, (string, string)> GeneralDigests = //Tuple
+      new Dictionary<GeneralDigest, (string, string)> {
         { GeneralDigest.ContentDigest,
-          Tuple.Create("Content Digest",
+          ("Content Digest",
             "A hash of the Content ID, DRM type, Content Type, PFS Image digest, and Major Param digest") },
         { GeneralDigest.GameDigest,
-          Tuple.Create("Game Digest",
+          ("Game Digest",
             "The PFS image digest") },
         { GeneralDigest.HeaderDigest,
-          Tuple.Create("Header Digest",
+          ("Header Digest",
             "A hash of the first 64 bytes and the 128 bytes at 0x400 of the PKG") },
         { GeneralDigest.SystemDigest,
-          Tuple.Create("System Digest",
+          ("System Digest",
             "???") },
         { GeneralDigest.MajorParamDigest,
-          Tuple.Create("Major Param Digest",
+          ("Major Param Digest",
             "A hash of the ATTRIBUTE, CATEGORY, FORMAT, and PUBTOOLVER param.sfo entries") },
         { GeneralDigest.ParamDigest,
-          Tuple.Create("Param Digest",
+          ("Param Digest",
             "A hash of the entire param.sfo file (entry)") },
         { GeneralDigest.PlaygoDigest,
-          Tuple.Create("Playgo Digest",
+          ("Playgo Digest",
             "???") },
         { GeneralDigest.TrophyDigest,
-          Tuple.Create("Trophy Digest",
+          ("Trophy Digest",
             "???") },
         { GeneralDigest.ManualDigest,
-          Tuple.Create("Manual Digest",
+          ("Manual Digest",
             "???") },
         { GeneralDigest.KeymapDigest,
-          Tuple.Create("Keymap Digest",
+          ("Keymap Digest",
             "???") },
         { GeneralDigest.OriginDigest,
-          Tuple.Create("Origin Digest",
+          ("Origin Digest",
             "???") },
         { GeneralDigest.TargetDigest,
-          Tuple.Create("Target Digest",
+          ("Target Digest",
             "???") },
         { GeneralDigest.OriginGameDigest,
-          Tuple.Create("Origin Game Digest",
+          ("Origin Game Digest",
             "???") },
         { GeneralDigest.TargetGameDigest,
-          Tuple.Create("Target Game Digest",
+          ("Target Game Digest",
             "???") },
       };
 
@@ -341,11 +341,11 @@ namespace LibOrbisPkg.PKG
     /// Checks the hashes and signatures for this PKG.
     /// </summary>
     /// <returns>Returns a list of validation steps and their success (true) or failure (false).</returns>
-    public IEnumerable<Tuple<Validation, ValidationResult>> Validate(Stream pkgStream)
+    public IEnumerable<(Validation, ValidationResult)> Validate(Stream pkgStream) //Tuple
     {
       foreach(var validation in Validations(pkgStream))
       {
-        yield return Tuple.Create(validation, validation.Validate());
+        yield return (validation, validation.Validate());
       }
     }
   }

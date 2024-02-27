@@ -106,7 +106,7 @@ namespace LibOrbisPkg.PFS
       Log($"Creating inodes ({allDirs.Count} dirs and {allFiles.Count} files)...");
       addDirInodes();
       addFileInodes();
-      
+
       (fpt, colResolver) = FlatPathTable.Create(allNodes);
 
       Log("Calculating data block layout...");

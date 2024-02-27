@@ -34,13 +34,13 @@ namespace LibOrbisPkg.Util
     }
   }
 #if !CORE
-  public static class TupleExtension
-  {
-    public static void Deconstruct<T1,T2>(this Tuple<T1, T2> twople, out T1 item1, out T2 item2)
-    {
-      item1 = twople.Item1;
-      item2 = twople.Item2;
-    }
-  }
+  //public static class TupleExtension
+  //{
+  //  public static void Deconstruct<T1,T2>(this Tuple<T1, T2> twople, out T1 item1, out T2 item2) //Tuple
+  //  {
+  //    item1 = twople.Item1;
+  //    item2 = twople.Item2;
+  //  }
+  //}
 #endif
 }

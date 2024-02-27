@@ -25,7 +25,7 @@ namespace LibOrbisPkg.PFS
       }
       return false;
     }
-    public static Tuple<FlatPathTable,CollisionResolver> Create(List<FSNode> nodes)
+    public static (FlatPathTable, CollisionResolver) Create(List<FSNode> nodes)
     {
       var hashMap = new SortedDictionary<uint, uint>();
       var nodeMap = new Dictionary<uint, List<FSNode>>();
@@ -48,7 +48,7 @@ namespace LibOrbisPkg.PFS
       }
       if(!collision)
       {
-        return Tuple.Create(new FlatPathTable(hashMap), (CollisionResolver)null);
+        return (new FlatPathTable(hashMap), (CollisionResolver)null);
       }
 
       uint offset = 0;
@@ -71,7 +71,7 @@ namespace LibOrbisPkg.PFS
         }
         offset += 0x18;
       }
-      return Tuple.Create(new FlatPathTable(hashMap), new CollisionResolver(colEnts));
+      return (new FlatPathTable(hashMap), new CollisionResolver(colEnts));
     }
 
     private SortedDictionary<uint, uint> hashMap;

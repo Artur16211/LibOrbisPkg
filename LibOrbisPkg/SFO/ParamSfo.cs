@@ -115,7 +115,7 @@ namespace LibOrbisPkg.SFO
     /// 
     /// </summary>
     /// <returns>A tuple containing the offset of the data table and the total file size.</returns>
-    private Tuple<int, int> CalcSize()
+    private (int dataTableOffset, int fileSize) CalcSize() //Tuple
     {
       int keyTableSize = 0x0;
       int dataSize = 0x0;
@@ -127,14 +127,12 @@ namespace LibOrbisPkg.SFO
       }
       int dataTableOffset = keyTableOffset + keyTableSize;
       if (dataTableOffset % 4 != 0) dataTableOffset += 4 - (dataTableOffset % 4);
-      return Tuple.Create(dataTableOffset, dataSize + dataTableOffset);
+      return (dataTableOffset, dataSize + dataTableOffset);
     }
 
     public void Write(Stream s)
     {
-      var size = CalcSize();
-      var dataTableOffset = size.Item1;
-      var fileSize = size.Item2;
+      (int dataTableOffset, int fileSize) = CalcSize();
       s.SetLength(0);
       s.SetLength(fileSize);
       s.WriteInt32BE(0x00505346); // " PSF" magic
