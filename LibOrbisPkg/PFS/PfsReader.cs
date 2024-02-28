@@ -103,7 +103,7 @@ namespace LibOrbisPkg.PFS
     // Private state for the PfsReader class
     private IMemoryReader reader;
     private PfsHeader hdr;
-    private inode[] dinodes;
+    private Inode[] dinodes;
     private Dir root;
     private Dir uroot;
     private byte[] sectorBuf;
@@ -123,7 +123,7 @@ namespace LibOrbisPkg.PFS
         hdr = PfsHeader.ReadFromStream(ms);
       }
       int dinodeSize;
-      Func<Stream, inode> dinodeReader;
+      Func<Stream, Inode> dinodeReader;
       if (hdr.Mode.HasFlag(PfsMode.Signed))
       {
         dinodes = new DinodeS32[hdr.DinodeCount];

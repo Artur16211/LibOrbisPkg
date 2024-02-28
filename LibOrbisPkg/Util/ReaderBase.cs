@@ -6,7 +6,7 @@ namespace LibOrbisPkg.Util
   public class ReaderBase
   {
     [StructLayout(LayoutKind.Explicit, Size = 8)]
-    private unsafe struct storage
+    private unsafe struct Storage
     {
       [FieldOffset(0)]
       public byte u8;
@@ -32,7 +32,7 @@ namespace LibOrbisPkg.Util
       public fixed byte buf[8];
     }
 
-    private storage buffer;
+    private Storage buffer;
     protected Stream s;
     protected bool flipEndian;
     protected ReaderBase(bool flipEndian, Stream stream)
@@ -40,7 +40,7 @@ namespace LibOrbisPkg.Util
       s = stream;
       this.flipEndian = flipEndian;
     }
-    private ref storage ReadEndian(int count)
+    private ref Storage ReadEndian(int count)
     {
       unsafe
       {

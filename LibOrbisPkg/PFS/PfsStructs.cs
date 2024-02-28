@@ -110,9 +110,9 @@ namespace LibOrbisPkg.PFS
       };
       s.Position += 8; // skip a 64-bit zero
       hdr.InodeBlockSig = DinodeS64.ReadFromStream(s);
-      if (hdr.Version != 1 || hdr.Magic != 20130315)
+      if (hdr.Version != 1 || hdr.Magic != 0x1332A0B) //20130315=0x1332A0B
       {
-        throw new InvalidDataException($"Invalid PFS superblock version ({hdr.Version}) or magic ({hdr.Magic})");
+        throw new InvalidDataException($"Invalid PFS superblock version ({hdr.Version.ToString("X")}) or magic ({hdr.Magic.ToString("X")})");
       }
       s.Position = start + 0x370;
       hdr.Seed = s.ReadBytes(16);
@@ -168,14 +168,14 @@ namespace LibOrbisPkg.PFS
   /// <summary>
   /// Base class for inodes. Inodes can be signed or unsigned, and 32 or 64 bit.
   /// </summary>
-  public abstract class inode
+  public abstract class Inode
   {
     public const InodeMode RXOnly =
       InodeMode.o_read | InodeMode.o_execute |
       InodeMode.g_read | InodeMode.g_execute |
       InodeMode.u_read | InodeMode.u_execute;
 
-    public inode()
+    public Inode()
     {
       SetTime((long)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
     }
@@ -214,7 +214,7 @@ namespace LibOrbisPkg.PFS
 
     public abstract void SetDirectBlock(int idx, int block);
     public abstract void WriteToStream(Stream s);
-    public inode SetTime(long time)
+    public Inode SetTime(long time)
     {
       Time1_sec = time;
       Time2_sec = time;
@@ -227,7 +227,7 @@ namespace LibOrbisPkg.PFS
   /// <summary>
   /// 32-bit unsigned inodes
   /// </summary>
-  public class DinodeD32 : inode
+  public class DinodeD32 : Inode
   {
     public const long SizeOf = 0xA8;
     public int[] db = new int[12];
@@ -312,7 +312,7 @@ namespace LibOrbisPkg.PFS
   /// <summary>
   /// Signed 32-bit inode
   /// </summary>
-  public class DinodeS32 : inode
+  public class DinodeS32 : Inode
   {
     public const long SizeOf = 0x2C8;
     public DinodeS32()
@@ -407,7 +407,7 @@ namespace LibOrbisPkg.PFS
   /// <summary>
   /// Signed 64-bit inode
   /// </summary>
-  public class DinodeS64 : inode
+  public class DinodeS64 : Inode
   {
     public const long SizeOf = 0x310;
     public DinodeS64()

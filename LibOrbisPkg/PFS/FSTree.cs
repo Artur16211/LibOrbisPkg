@@ -23,7 +23,7 @@ namespace LibOrbisPkg.PFS
     /// <summary>
     /// The inode describing this node.
     /// </summary>
-    public inode ino;
+    public Inode ino;
 
     /// <summary>
     /// The actual size on disk of this node (i.e. the filesize or size of the dirent block)
