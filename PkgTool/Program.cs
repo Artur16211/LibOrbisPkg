@@ -95,10 +95,34 @@ namespace PkgTool
         "pkg_makegp4",
         "Extracts all content from the PKG and creates a GP4 project in the output directory",
         ArgDef.Multi(ArgDef.Option("passcode"), "input.pkg", "output_dir"),
-        (_, optionals, args) => 
+        (_, optionals, args) =>
         {
           var passcode = optionals.ContainsKey("passcode") ? optionals["passcode"] : null;
           Gp4Creator.CreateProjectFromPKG(args[2], args[1], passcode);
+        }),
+      Verb.Create(
+        "pkg_listfiles",
+        "Extracts all the files from a PKG to the given output directory. Use the verbose flag to print filenames as they are extracted.",
+        ArgDef.Multi(ArgDef.Bool("verbose"), ArgDef.Option("passcode", "xts_tweak", "xts_data"), "input.pkg"),
+        (flags, optionals, args) =>
+        {
+          var pkgPath = args[1];
+          var passcode = optionals["passcode"];
+          Pkg pkg;
+
+          var mmf = MemoryMappedFile.CreateFromFile(pkgPath);
+          using (var s = mmf.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
+          {
+            pkg = new PkgReader(s).ReadPkg();
+          }
+          var ekpfs = EkPfsFromPasscode(pkg, passcode);
+          var outerPfsOffset = (long)pkg.Header.pfs_image_offset;
+          using(var acc = mmf.CreateViewAccessor(outerPfsOffset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read))
+          {
+            var outerPfs = new PfsReader(acc, pkg.Header.pfs_flags, ekpfs, optionals["xts_tweak"]?.FromHexCompact(), optionals["xts_data"]?.FromHexCompact());
+            var inner = new PfsReader(new PFSCReader(outerPfs.GetFile("pfs_image.dat").GetView()));
+            ListInParallel(inner);
+          }
         }),
       Verb.Create(
         "pkg_extract",
@@ -123,6 +147,20 @@ namespace PkgTool
             var outerPfs = new PfsReader(acc, pkg.Header.pfs_flags, ekpfs, optionals["xts_tweak"]?.FromHexCompact(), optionals["xts_data"]?.FromHexCompact());
             var inner = new PfsReader(new PFSCReader(outerPfs.GetFile("pfs_image.dat").GetView()));
             ExtractInParallel(inner, outPath, flags["verbose"]);
+          }
+        }),
+      Verb.Create(
+        "pfs_listfiles",
+        "Extracts all the files from a PFS image to the given output directory. Use the verbose flag to print filenames as they are extracted.",
+        ArgDef.Multi(ArgDef.Bool("verbose"), "input.dat"),
+        (flags, args) =>
+        {
+          var pfsPath = args[1];
+          using(var mmf = MemoryMappedFile.CreateFromFile(pfsPath))
+          using(var acc = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read))
+          {
+            var pfs = new PfsReader(acc);
+            ListInParallel(pfs);
           }
         }),
       Verb.Create(
@@ -223,7 +261,7 @@ namespace PkgTool
               {
                 var ekpfs = EkPfsFromPasscode(pkg, passcode);
                 (tweakKey, dataKey) = Crypto.PfsGenEncKey(ekpfs, pfs_seed);
-              } 
+              }
               else
               {
                 tweakKey = optionals["xts_tweak"]?.FromHexCompact();
@@ -510,6 +548,16 @@ namespace PkgTool
         }),
     };
 
+    private static void ListInParallel(PfsReader inner)
+    {
+      // Console.WriteLine("Listing in parallel...");
+      Parallel.ForEach(
+        inner.GetAllFiles(),
+        (f, _) => {
+          Console.WriteLine(f.FullName);
+        });
+    }
+
     private static void ExtractInParallel(PfsReader inner, string outPath, bool verbose)
     {
       Console.WriteLine("Extracting in parallel...");
@@ -545,7 +593,7 @@ namespace PkgTool
         },
         x => { });
     }
-    
+
     private static string SafeName(string name)
     {
       name = name.Replace("\\", "").Replace("/", "").Replace(":", "").Replace("*", "")
@@ -577,7 +625,7 @@ namespace PkgTool
     /// the second is a map of optional value name -> value,
     /// the third is a list of positional arguments.
     /// </summary>
-    public Action<Dictionary<string, bool>, Dictionary<string,string>, string[]> Body;
+    public Action<Dictionary<string, bool>, Dictionary<string, string>, string[]> Body;
 
     /// <summary>
     /// Creates a verb that uses only positional arguments.
@@ -611,7 +659,7 @@ namespace PkgTool
     /// <param name="args"></param>
     /// <param name="action"></param>
     /// <returns></returns>
-    public static Verb Create(string name, string helpText, List<ArgDef> args, Action<Dictionary<string,bool>, Dictionary<string,string>, string[]> action)
+    public static Verb Create(string name, string helpText, List<ArgDef> args, Action<Dictionary<string, bool>, Dictionary<string, string>, string[]> action)
     {
       return new Verb { Name = name, HelpText = helpText, Args = args, Body = action };
     }
@@ -620,7 +668,7 @@ namespace PkgTool
       if (Args == null || Args.Count == 0)
         return Name;
       var options = Args
-        .Select(x => 
+        .Select(x =>
           x.Type == ArgType.Boolean ? $"[--{x.Name}]" :
           x.Type == ArgType.Optional ? $"[--{x.Name} <...>]" :
           /* ArgType.Positional */ $"<{x.Name}>")
@@ -685,7 +733,7 @@ namespace PkgTool
         }
 
         // Fill out the unset optional args with the default values, and catch missing required arguments.
-        foreach(var arg in remainingArgs)
+        foreach (var arg in remainingArgs)
         {
           switch (arg.Type)
           {
@@ -712,7 +760,7 @@ namespace PkgTool
       Console.WriteLine("");
       Console.WriteLine("Verbs:");
       var verb_list = (args.Length > 0
-          && verbs.Where(verb => verb.Name.StartsWith(args[0])).ToArray() is Verb[] prefixList 
+          && verbs.Where(verb => verb.Name.StartsWith(args[0])).ToArray() is Verb[] prefixList
           && prefixList.Length > 0) ? prefixList : verbs;
       foreach (var verb in verb_list.OrderBy(z => z.Name))
       {
