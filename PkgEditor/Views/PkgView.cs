@@ -346,14 +346,14 @@ namespace PkgEditor.Views
       {
         using (var s = pkgFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
         {
-          foreach (var v in validator.Validate(s).OrderBy((a)=>a.Item1.Location))
+          foreach ((PkgValidator.Validation validation, PkgValidator.ValidationResult Validate) in validator.Validate(s).OrderBy((a)=>a.validation.Location))
           {
-            var item = new ListViewItem(v.Item1.Name);
-            if (v.Item2 == PkgValidator.ValidationResult.Ok)
+            var item = new ListViewItem(validation.Name);
+            if (Validate == PkgValidator.ValidationResult.Ok)
               item.BackColor = Color.LightGreen;
-            else if (v.Item2 == PkgValidator.ValidationResult.Fail)
+            else if (Validate == PkgValidator.ValidationResult.Fail)
               item.BackColor = Color.LightSalmon;
-            item.Tag = v;
+            item.Tag = (validation, Validate);
             listView1.BeginInvoke((Action)(() => listView1.Items.Add(item)));
           }
         }
@@ -379,7 +379,7 @@ namespace PkgEditor.Views
       }
       else
       {
-        if(listView1.SelectedItems[0].Tag is Tuple<PkgValidator.Validation, PkgValidator.ValidationResult> t)
+        if (listView1.SelectedItems[0].Tag is ValueTuple<PkgValidator.Validation, PkgValidator.ValidationResult> t)
         {
           var resultTxt = "";
           switch (t.Item2)
@@ -487,7 +487,7 @@ namespace PkgEditor.Views
       }
     }
 
-    private void Button2_Click(object sender, EventArgs e)
+    private void ExportGP4Project_Click(object sender, EventArgs e)
     {
       var sfd = new SaveFileDialog()
       {
@@ -495,7 +495,7 @@ namespace PkgEditor.Views
         Filter = "GP4 Projects|Project.gp4",
         Title = "Choose a location for the exported PKG and project file",
       };
-      if(sfd.ShowDialog() == DialogResult.OK)
+      if (sfd.ShowDialog() == DialogResult.OK)
       {
         var outputDir = Path.GetDirectoryName(sfd.FileName);
         LibOrbisPkg.GP4.Gp4Creator.CreateProjectFromPKG(outputDir, pkgFile, passcode);

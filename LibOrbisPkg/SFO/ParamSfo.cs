@@ -109,13 +109,13 @@ namespace LibOrbisPkg.SFO
     }
     int keyTableOffset => 0x14 + (Values.Count * 0x10);
 
-    public int FileSize => CalcSize().Item2;
+    public int FileSize => CalcSize().fileSize;
 
     /// <summary>
     /// 
     /// </summary>
     /// <returns>A tuple containing the offset of the data table and the total file size.</returns>
-    private (int dataTableOffset, int fileSize) CalcSize() //Tuple
+    private (int dataTableOffset, int fileSize) CalcSize()
     {
       int keyTableSize = 0x0;
       int dataSize = 0x0;

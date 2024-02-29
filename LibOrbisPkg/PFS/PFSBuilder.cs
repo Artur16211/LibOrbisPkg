@@ -183,7 +183,7 @@ namespace LibOrbisPkg.PFS
             () => Tuple.Create(new byte[properties.BlockSize], new HMACSHA256(signKey)),
             (sig, status, local) =>
             {
-              var (sig_buffer, hmac) = local;
+              (byte[] sig_buffer, HMACSHA256 hmac) = local;
               var position = sig.Block * sig_buffer.Length;
               view.ReadArray(position, sig_buffer, 0, sig_buffer.Length);
               position = sig.SigOffset;
@@ -207,7 +207,7 @@ namespace LibOrbisPkg.PFS
         if (hdr.Mode.HasFlag(PfsMode.Encrypted))
         {
           Log("Encrypting in parallel...");
-          var (tweakKey, dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
+          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
           Parallel.ForEach(
             // generates sector indices for each sector to be encrypted
             XtsSectorGen(),
@@ -216,7 +216,7 @@ namespace LibOrbisPkg.PFS
             // Loop body
             (xtsSector, loopState, localData) =>
             {
-              var (transformer, sectorBuffer) = localData;
+              (XtsBlockTransform transformer, byte[] sectorBuffer) = localData;
               var sectorOffset = xtsSector * xtsSectorSize;
               view.ReadArray(sectorOffset, sectorBuffer, 0, xtsSectorSize);
               transformer.EncryptSector(sectorBuffer, (ulong)xtsSector);
@@ -254,7 +254,7 @@ namespace LibOrbisPkg.PFS
       if (hdr.Mode.HasFlag(PfsMode.Encrypted))
       {
         Log("Encrypting...");
-        var (tweakKey,dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
+        (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
         var transformer = new XtsBlockTransform(dataKey, tweakKey);
         byte[] sectorBuffer = new byte[xtsSectorSize];
         foreach (var xtsSector in XtsSectorGen())

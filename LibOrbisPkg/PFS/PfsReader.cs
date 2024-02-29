@@ -144,7 +144,7 @@ namespace LibOrbisPkg.PFS
           throw new ArgumentException("PFS image is encrypted but no decryption key was provided");
         if (ekpfs != null)
         {
-          var (tweakKey, dataKey) = Crypto.PfsGenEncKey(ekpfs, hdr.Seed, (pfs_flags & 0x2000000000000000UL) != 0);
+          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(ekpfs, hdr.Seed, (pfs_flags & 0x2000000000000000UL) != 0);
           reader = new XtsDecryptReader(reader, dataKey, tweakKey, XtsStartSector, XtsSectorSize);
         }
         else

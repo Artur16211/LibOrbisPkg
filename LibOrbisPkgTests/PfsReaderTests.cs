@@ -55,7 +55,7 @@ namespace LibOrbisPkgTests
         new PfsBuilder(pfsProperties).WriteImage(pfsImg);
         var streamReader = new LibOrbisPkg.Util.StreamReader(pfsImg);
         var reader1 = new PfsReader(streamReader, 0, ekpfs: new byte[32]);
-        var (tweak, data) = Crypto.PfsGenEncKey(new byte[32], new byte[16]);
+        (byte[] tweak, byte[] data) = Crypto.PfsGenEncKey(new byte[32], new byte[16]);
         var reader2 = new PfsReader(streamReader, 0, data: data, tweak: tweak);
       }
     }

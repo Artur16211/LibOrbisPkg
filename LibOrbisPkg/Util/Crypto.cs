@@ -28,7 +28,7 @@ namespace LibOrbisPkg.Util
     /// <summary>
     /// Generates a (tweak, data) key pair for XTS
     /// </summary>
-    public static (byte[] tweakKey, byte[] dataKey) PfsGenEncKey(byte[] ekpfs, byte[] seed, bool newCrypt = false) //Tuple
+    public static (byte[] tweakKey, byte[] dataKey) PfsGenEncKey(byte[] ekpfs, byte[] seed, bool newCrypt = false)
     {
       var encKey = PfsGenCryptoKey(newCrypt ? new HMACSHA256(ekpfs).ComputeHash(seed) : ekpfs, seed, 1);
       var dataKey = new byte[16];

@@ -83,8 +83,8 @@ namespace LibOrbisPkg.PKG
       this.pkg = pkg;
     }
 
-    private Dictionary<GeneralDigest, (string, string)> GeneralDigests = //Tuple
-      new Dictionary<GeneralDigest, (string, string)> {
+    private Dictionary<GeneralDigest, (string name, string desc)> GeneralDigests =
+      new Dictionary<GeneralDigest, (string name, string desc)> {
         { GeneralDigest.ContentDigest,
           ("Content Digest",
             "A hash of the Content ID, DRM type, Content Type, PFS Image digest, and Major Param digest") },
@@ -150,8 +150,8 @@ namespace LibOrbisPkg.PKG
         var generalDigestsLoc = pkg.GeneralDigests.meta.DataOffset;
         var validation = new Validation(
           ValidationType.Hash, 
-          meta.Item1, 
-          meta.Item2, 
+          meta.name, 
+          meta.desc, 
           generalDigestsLoc + ((int)Math.Log((int)d.Key,2) * 32));
         switch (d.Key)
         {
@@ -341,7 +341,7 @@ namespace LibOrbisPkg.PKG
     /// Checks the hashes and signatures for this PKG.
     /// </summary>
     /// <returns>Returns a list of validation steps and their success (true) or failure (false).</returns>
-    public IEnumerable<(Validation, ValidationResult)> Validate(Stream pkgStream) //Tuple
+    public IEnumerable<(Validation validation, ValidationResult Validate)> Validate(Stream pkgStream)
     {
       foreach(var validation in Validations(pkgStream))
       {

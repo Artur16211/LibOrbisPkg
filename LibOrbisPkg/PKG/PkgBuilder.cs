@@ -216,7 +216,7 @@ namespace LibOrbisPkg.PKG
           () => Tuple.Create(SHA256.Create(), new byte[CHUNK_SIZE]),
           (chunk, _, local) =>
           {
-            var (sha, buffer) = local;
+            (SHA256 sha, byte[] buffer) = local;
             view.ReadArray((long)chunk * CHUNK_SIZE, buffer, 0, CHUNK_SIZE);
             Buffer.BlockCopy(sha.ComputeHash(buffer), 0, FileData, chunk * 4, 4);
             return local;

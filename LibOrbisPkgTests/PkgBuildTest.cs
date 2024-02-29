@@ -121,9 +121,9 @@ namespace LibOrbisPkgTests
         new PkgBuilder(TestHelper.MakeProperties()).Write(pkgFile, s => { });
 
         var pkg = new PkgReader(pkgFile).ReadPkg();
-        foreach(var v in new PkgValidator(pkg).Validate(pkgFile))
+        foreach ((PkgValidator.Validation validation, PkgValidator.ValidationResult Validate) in new PkgValidator(pkg).Validate(pkgFile))
         {
-          Assert.IsTrue(v.Item2 == PkgValidator.ValidationResult.Ok, v.Item1.Name);
+          Assert.IsTrue(Validate == PkgValidator.ValidationResult.Ok, validation.Name);
         }
       }
     }
@@ -139,9 +139,9 @@ namespace LibOrbisPkgTests
         new PkgBuilder(TestHelper.MakeProperties(VolumeType: VolumeType.pkg_ps4_app)).Write(pkgFile, s => { });
 
         var pkg = new PkgReader(pkgFile).ReadPkg();
-        foreach (var v in new PkgValidator(pkg).Validate(pkgFile))
+        foreach ((PkgValidator.Validation validation, PkgValidator.ValidationResult Validate) in new PkgValidator(pkg).Validate(pkgFile))
         {
-          Assert.IsTrue(v.Item2 == PkgValidator.ValidationResult.Ok, v.Item1.Name);
+          Assert.IsTrue(Validate == PkgValidator.ValidationResult.Ok, validation.Name);
         }
       }
     }
@@ -161,9 +161,9 @@ namespace LibOrbisPkgTests
         new PkgBuilder(properties).Write(pkgFile, s => { });
 
         var pkg = new PkgReader(pkgFile).ReadPkg();
-        foreach (var v in new PkgValidator(pkg).Validate(pkgFile))
+        foreach ((PkgValidator.Validation validation, PkgValidator.ValidationResult Validate) in new PkgValidator(pkg).Validate(pkgFile))
         {
-          Assert.IsTrue(v.Item2 == PkgValidator.ValidationResult.Ok, v.Item1.Name);
+          Assert.IsTrue(Validate == PkgValidator.ValidationResult.Ok, validation.Name);
         }
       }
     }
