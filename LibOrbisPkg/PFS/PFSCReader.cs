@@ -84,7 +84,18 @@ namespace LibOrbisPkg.PFS
         using (var bufStream = new MemoryStream(sectorBuf))
         using (var ds = new DeflateStream(bufStream, CompressionMode.Decompress))
         {
-          ds.Read(output, 0, hdr.BlockSz);
+          var totalRead = 0;
+          var byteRead = 0;
+          while (totalRead < output.Length)
+          {
+            byteRead = ds.Read(output, totalRead, output.Length - totalRead); //ds.Read(output, 0, hdr.BlockSz);
+            if (byteRead == 0) break;
+            totalRead += byteRead;
+          }
+          //Is there any workaround for .Net 6 System.IO.Compression issue.
+          //https://stackoverflow.com/a/72955102
+          //Breaking changes in .NET 6: Partial and zero-byte reads in DeflateStream, GZipStream, and CryptoStream
+          //https://learn.microsoft.com/en-us/dotnet/core/compatibility/core-libraries/6.0/partial-byte-reads-in-streams
         }
       }
     }
