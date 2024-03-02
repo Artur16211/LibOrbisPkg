@@ -229,22 +229,14 @@ namespace PkgEditor.Views
     private void TableEditor_DeleteSelected()
     {
       if (@readonly) return;
-      if (listView1.SelectedItems.Count > 0)
+      if (listView1.SelectedItems.Count <= 0) return;
+
+      foreach (var item in listView1.SelectedItems)
       {
-        foreach (var item in listView1.SelectedItems)
-        {
-          if ((item as ListViewItem).Tag is Value v)
-          {
-            proj.Values.Remove(v);
-            if (v == selectedValue)
-            {
-              // This is required to clear the value editor
-              selectedValue = null;
-            }
-          }
-        }
-        ProjectWasModified();
+        if ((item as ListViewItem).Tag is Value v)
+          RemoveProjValue(v);
       }
+      ProjectWasModified();
     }
 
     private void TableEditor_UpdateValue(object sender, EventArgs e)
@@ -293,10 +285,15 @@ namespace PkgEditor.Views
       {
         appTypeComboBox.Items.Add(t);
       }
-      downloadSizeComboBox.Items.Clear();
-      foreach (var d in SfoData.DownloadSizes)
+      Download0SizeComboBox.Items.Clear();
+      foreach (var d in SfoData.Download0Sizes)
       {
-        downloadSizeComboBox.Items.Add(d);
+        Download0SizeComboBox.Items.Add(d);
+      }
+      Download1SizeComboBox.Items.Clear();
+      foreach (var d in SfoData.Download1Sizes)
+      {
+        Download1SizeComboBox.Items.Add(d);
       }
       GuidedEditor_Reload();
     }
@@ -332,7 +329,8 @@ namespace PkgEditor.Views
       {
         titleTextBox.Text = proj["TITLE"] is Utf8Value t ? t.Value : "";
       }
-      downloadSizeComboBox.Enabled
+      Download0SizeComboBox.Enabled
+        = Download1SizeComboBox.Enabled
         = appTypeComboBox.Enabled
         = appVersionTextBox.Enabled
         = proj["CATEGORY"] is Utf8Value c ? c.Value.StartsWith("g") : false;
@@ -348,10 +346,13 @@ namespace PkgEditor.Views
       {
         appTypeComboBox.SelectedIndex = proj["APP_TYPE"] is IntegerValue a ? a.Value : 0;
       }
-      if (sender != downloadSizeComboBox)
+      if (sender != Download0SizeComboBox && sender != Download1SizeComboBox)
       {
         var index = proj["DOWNLOAD_DATA_SIZE"] is IntegerValue d && d.Value > 63 ? (int)Math.Log(d.Value / 64, 2) + 1 : 0;
-        downloadSizeComboBox.SelectedIndex = index >= 0 && index <= 5 ? index : 0;
+        Download0SizeComboBox.SelectedIndex = index >= 0 && index <= 5 ? index : 0;
+
+        var index1 = proj["DOWNLOAD_DATA_SIZE_1"] is IntegerValue d1 && d1.Value > 3227 ? d1.Value / 3228 : 0;
+        Download1SizeComboBox.SelectedIndex = index1 >= 0 && index1 <= 5 ? index1 : 0;
       }
       attributes2Enable.Checked = proj["ATTRIBUTE2"] != null;
       loaded = true;
@@ -384,8 +385,15 @@ namespace PkgEditor.Views
         proj.SetValue("APP_TYPE", SfoEntryType.Integer, appTypeComboBox.SelectedIndex.ToString());
       else
         proj["APP_TYPE"] = null;
-      if (downloadSizeComboBox.Enabled)
-        proj.SetValue("DOWNLOAD_DATA_SIZE", SfoEntryType.Integer, $"{64 * (1 << (downloadSizeComboBox.SelectedIndex - 1))}");
+      if (Download0SizeComboBox.Enabled)
+        proj.SetValue("DOWNLOAD_DATA_SIZE", SfoEntryType.Integer, $"{64 * (1 << (Download0SizeComboBox.SelectedIndex - 1))}");
+      if (Download1SizeComboBox.Enabled)
+      {
+        if (Download1SizeComboBox.SelectedIndex == 0)
+          RemoveProjValue("DOWNLOAD_DATA_SIZE_1");
+        else
+          proj.SetValue("DOWNLOAD_DATA_SIZE_1", SfoEntryType.Integer, $"{3328 * Download1SizeComboBox.SelectedIndex}");
+      }
       proj.SetValue("VERSION", SfoEntryType.Utf8, versionTextBox.Text, 8);
       ProjectWasModified(sender);
     }
@@ -519,16 +527,24 @@ namespace PkgEditor.Views
       {
         if (MessageBox.Show($"Text information of {lang} is being deleted, continue?", "Delete Languages", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-        if (proj.Values.Find(x => x.Name == name) is Value v)
-        {
-          proj.Values.Remove(v);
-          if (v == selectedValue)
-          {
-            // This is required to clear the value editor
-            selectedValue = null;
-          }
-        }
+        RemoveProjValue(name);
         ProjectWasModified();
+      }
+    }
+
+    private void RemoveProjValue(string name)
+    {
+      if (!(proj.Values.Find(x => x.Name == name) is Value v)) return;
+
+      RemoveProjValue(v);
+    }
+
+    private void RemoveProjValue(Value value)
+    {
+      proj.Values.Remove(value);
+      if (value == selectedValue)
+      { // This is required to clear the value editor
+        selectedValue = null;
       }
     }
   }
