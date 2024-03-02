@@ -56,6 +56,7 @@ namespace PkgEditor.Views
       TableEditor_Init();
       TableEditor_PopulateInput(null);
       GuidedEditor_Init();
+      LanguagesDropDown_Init();
     }
 
     public override bool CanSave => Modified && !@readonly;
@@ -104,11 +105,13 @@ namespace PkgEditor.Views
       TableEditor_Init();
       TableEditor_PopulateInput(selectedValue, sender);
       GuidedEditor_Reload(sender);
+      LanguagesDropDown_Init();
     }
 
     private void TableEditor_Init()
     {
       if (proj == null) return;
+
       maxLengthInput.ReadOnly = valueTextBox.ReadOnly = nameTextBox.ReadOnly = @readonly;
       typeDropDown.Enabled = toolStrip1.Enabled = maxLengthInput.Enabled = !@readonly;
       listView1.Items.Clear();
@@ -117,19 +120,19 @@ namespace PkgEditor.Views
         switch (param)
         {
           case Utf8Value v:
-            listView1.Items.Add(new ListViewItem(new[] { v.Name, "utf8", v.Length.ToString(), v.MaxLength.ToString(), v.Value })
+            listView1.Items.Add(new ListViewItem(new[] { v.Name, v.Description, "utf8", v.Length.ToString(), v.MaxLength.ToString(), v.Value })
             {
               Tag = param
             });
             break;
           case Utf8SpecialValue v:
-            listView1.Items.Add(new ListViewItem(new[] { v.Name, "utf8_special", v.Length.ToString(), v.MaxLength.ToString(), v.Value.Select(x => string.Format("{0:X2}", x)).DefaultIfEmpty("").Aggregate((s1, s2) => s1 + s2) })
+            listView1.Items.Add(new ListViewItem(new[] { v.Name, v.Description, "utf8_special", v.Length.ToString(), v.MaxLength.ToString(), v.Value.Select(x => string.Format("{0:X2}", x)).DefaultIfEmpty("").Aggregate((s1, s2) => s1 + s2) })
             {
               Tag = param
             });
             break;
           case IntegerValue v:
-            listView1.Items.Add(new ListViewItem(new[] { v.Name, "integer", "4", "4", v.Value.ToString("X8") })
+            listView1.Items.Add(new ListViewItem(new[] { v.Name, v.Description, "integer", "4", "4", v.Value.ToString("X8") })
             {
               Tag = param
             });
@@ -233,7 +236,7 @@ namespace PkgEditor.Views
           if ((item as ListViewItem).Tag is Value v)
           {
             proj.Values.Remove(v);
-            if(v == selectedValue)
+            if (v == selectedValue)
             {
               // This is required to clear the value editor
               selectedValue = null;
@@ -330,8 +333,8 @@ namespace PkgEditor.Views
         titleTextBox.Text = proj["TITLE"] is Utf8Value t ? t.Value : "";
       }
       downloadSizeComboBox.Enabled
-        = appTypeComboBox.Enabled 
-        = appVersionTextBox.Enabled 
+        = appTypeComboBox.Enabled
+        = appVersionTextBox.Enabled
         = proj["CATEGORY"] is Utf8Value c ? c.Value.StartsWith("g") : false;
       if (sender != appVersionTextBox)
       {
@@ -464,5 +467,69 @@ namespace PkgEditor.Views
     }
 
     private void DeleteToolStripMenuItem_Click(object sender, EventArgs e) => TableEditor_DeleteSelected();
+
+    private void LanguagesDropDown_Init()
+    {
+      if (LanguagesDropDownButton.DropDownItems.Count == 0)
+      {
+        foreach (var language in SfoData.LangTypes)
+        {
+          LanguagesDropDownButton.DropDownItems.Add(new ToolStripMenuItem
+          {
+            DisplayStyle = ToolStripItemDisplayStyle.Text,
+            Name = "LanguagesDropDownItem" + language,
+            Text = language.ToString(),
+            Tag = language,
+            Checked = proj.Values.FindIndex(x => x.Name == language.Key) != -1,
+          });
+          LanguagesDropDownButton.DropDownItems[LanguagesDropDownButton.DropDownItems.Count - 1].Click += LanguagesDropDownItem_Click;
+        }
+      }
+      else
+      {
+        foreach (var item in LanguagesDropDownButton.DropDownItems)
+          if (item is ToolStripMenuItem menuItem && menuItem.Tag is LangType language)
+            menuItem.Checked = proj.Values.FindIndex(x => x.Name == language.Key) != -1;
+      }
+    }
+
+    private void LanguagesDropDownItem_Click(object sender, EventArgs e)
+    {
+      if (!(sender is ToolStripMenuItem languagesDropDownItem) || @readonly) return;
+      if (!(languagesDropDownItem.Tag is LangType langType)) return;
+      var lang = langType.Lang;
+      var name = langType.Key;
+
+      if (!languagesDropDownItem.Checked)
+      {
+        while (proj.GetValueByName(name) != null) return;
+
+        Value val = new Utf8Value(name, lang, 128);
+        int min = proj.Values.FindIndex(x => x.Name.StartsWith("TITLE_"));
+        if (min == -1) proj.Values.Add(val);
+        else
+        {
+          proj.Values.Insert(min, val);
+          int max = proj.Values.FindLastIndex(x => x.Name.StartsWith("TITLE_")) + 1;
+          proj.Values.Sort(min, max - min, Comparer<Value>.Create((a, b) => a.Name.CompareTo(b.Name)));
+        }
+        ProjectWasModified();
+      }
+      else
+      {
+        if (MessageBox.Show($"Text information of {lang} is being deleted, continue?", "Delete Languages", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+        if (proj.Values.Find(x => x.Name == name) is Value v)
+        {
+          proj.Values.Remove(v);
+          if (v == selectedValue)
+          {
+            // This is required to clear the value editor
+            selectedValue = null;
+          }
+        }
+        ProjectWasModified();
+      }
+    }
   }
 }

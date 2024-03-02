@@ -216,9 +216,12 @@ namespace LibOrbisPkg.SFO
     public Value(string name, SfoEntryType type)
     {
       Name = name; Type = type;
+      if (SfoData.KeyDescriptions.TryGetValue(Name, out var desc)) 
+        Description = desc;
     }
     public SfoEntryType Type;
     public string Name;
+    public string Description;
     public abstract int Length { get; }
     public abstract int MaxLength { get; }
     public abstract byte[] ToByteArray();
@@ -335,9 +338,31 @@ namespace LibOrbisPkg.SFO
       return $"{Type} - {Description}";
     }
   }
+  public class LangType
+  {
+    public string Key;
+    public string Lang;
+    public LangType(string lang, string key)
+    {
+      Lang = lang;
+      Key = key;
+    }
+    public override string ToString()
+    {
+      return $"{Lang} - {Key}";
+    }
+  }
 
   public static class SfoData
   {
+    static SfoData()
+    {
+      foreach (var language in SfoData.LangTypes)
+      {
+        KeyDescriptions.Add("S" + language.Key, string.Format("Short Name ({0})", language.Lang));
+        KeyDescriptions.Add(language.Key, string.Format("Name ({0})", language.Lang));
+      }
+    }
     // Source: https://psdevwiki.com/ps4/param.sfo
     public static readonly string[] AttributeNames =
     {
@@ -440,6 +465,38 @@ namespace LibOrbisPkg.SFO
       new AppType( 3, "Demo app" ),
       new AppType( 4, "Freemium app" ),
     };
+    public static readonly List<LangType> LangTypes = new List<LangType> {
+      new LangType( "Japanese",               "TITLE_00" ),
+      new LangType( "English",                "TITLE_01" ),
+      new LangType( "French",                 "TITLE_02" ),
+      new LangType( "Spanish",                "TITLE_03" ),
+      new LangType( "German",                 "TITLE_04" ),
+      new LangType( "Italian",                "TITLE_05" ),
+      new LangType( "Dutch",                  "TITLE_06" ),
+      new LangType( "Portuguese",             "TITLE_07" ),
+      new LangType( "Russian",                "TITLE_08" ),
+      new LangType( "Korean",                 "TITLE_09" ),
+      new LangType( "Trad.Chinese",           "TITLE_10" ),
+      new LangType( "Simp.Chinese",           "TITLE_11" ),
+      new LangType( "Finnish",                "TITLE_12" ),
+      new LangType( "Swedish",                "TITLE_13" ),
+      new LangType( "Danish",                 "TITLE_14" ),
+      new LangType( "Norwegian",              "TITLE_15" ),
+      new LangType( "Polish",                 "TITLE_16" ),
+      new LangType( "Braz.Portuguese",        "TITLE_17" ),
+      new LangType( "UK English",             "TITLE_18" ),
+      new LangType( "Turkish",                "TITLE_19" ),
+      new LangType( "Latin American Spanish", "TITLE_20" ),
+      new LangType( "Arabic",                 "TITLE_21" ),
+      new LangType( "Canadian French",        "TITLE_22" ),
+      new LangType( "Czech",                  "TITLE_23" ),
+      new LangType( "Hungarian",              "TITLE_24" ),
+      new LangType( "Greek",                  "TITLE_25" ),
+      new LangType( "Romanian",               "TITLE_26" ),
+      new LangType( "Thai",                   "TITLE_27" ),
+      new LangType( "Vietnamese",             "TITLE_28" ),
+      new LangType( "Indonesian",             "TITLE_29" ),
+    };
     public static readonly string[] DownloadSizes = new[]
     {
       "0MiB (Disable)",
@@ -448,6 +505,103 @@ namespace LibOrbisPkg.SFO
       "256MiB",
       "512MiB",
       "1GiB"
+    };
+
+    public static readonly Dictionary<string, string> KeyDescriptions = new Dictionary<string, string>() {
+      { "APP_TYPE",
+        "Application Type" },
+      { "APP_VER",
+        "Application Version" },
+      { "ATTRIBUTE",
+        "Various parameter" },
+      { "ATTRIBUTE2",
+        "Various parameter" },
+      { "BOOTABLE",
+        "Is bootable or not" },
+      { "CATEGORY",
+        "Category" },
+      { "CONTENT_ID",
+        "Content ID" },
+      { "GC_RO_SIZE",
+        "PS Vita card R/O size" },
+      { "GC_RW_SIZE",
+        "PS Vita card R/W size" },
+      { "DEV_FLAG",
+        "" },
+      { "DOWNLOAD_DATA_SIZE",
+        "Download Data Size (/download0)" },
+      { "DOWNLOAD_DATA_SIZE_1",
+        "Download Data Size (/download1)" },
+      { "EMU_VER",
+        "Emulator Version" },
+      { "FORMAT",
+        "Format" },
+      { "LICENSE",
+        "License information" },
+      { "NP_COMMUNICATION_ID",
+        "NP Communication ID" },
+      { "INSTALL_DIR_SAVEDATA",
+        "Title ID used by Shared Save Data" },
+      { "PARENTAL_LEVEL",
+        "Parental Lock Level" },
+      { "PSP2_DISP_VER",
+        "System's required version (PSP2) for display" },
+      { "PSP2_SYSTEM_VER",
+        "System's required version (PSP2)" },
+      { "PS3_SYSTEM_VER",
+        "System's required version (PS3)" },
+      { "RESOLUTION",
+        "Supported resolution" },
+      { "PUBTOOLINFO",
+        "Application-specific parameters" },
+      { "REGION_DENY",
+        "Region Restriction Information" },
+      { "PUBTOOLMINVER",
+        "" },
+      { "PUBTOOLVER",
+        "" },
+      { "SAVEDATA_MAX_SIZE",
+        "Save Data Quota" },
+      { "SAVE_DATA_MAX_SIZE",
+        "Save Data Quota" },
+      { "SAVE_DATA_TRANSFER_TITLE_ID_LIST",
+        "Title IDs for Save Data Transfer" },
+      { "REMOTE_PLAY_KEY_ASSIGN",
+        "Key assignment pattern for the Remote Play" },
+      { "SERVICE_ID_ADDCONT_ADD_1",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_2",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_3",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_4",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_5",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_6",
+        "Placeholder by system" },
+      { "SERVICE_ID_ADDCONT_ADD_7",
+        "Placeholder by system" },
+      { "SOUND_FORMAT",
+        "Sound Format" },
+      { "STITLE",
+        "Short Name (Default Language)" },
+      { "SYSTEM_VER",
+        "System's required version" },
+      { "TITLE",
+        "Name (Default Language)" },
+      { "TITLE_ID",
+        "Title ID" },
+      { "USER_DEFINED_PARAM_1",
+        "User-defined parameter 1" },
+      { "USER_DEFINED_PARAM_2",
+        "User-defined parameter 2" },
+      { "USER_DEFINED_PARAM_3",
+        "User-defined parameter 3" },
+      { "USER_DEFINED_PARAM_4",
+        "User-defined parameter 4" },
+      { "VERSION",
+        "Master's version" },
     };
   }
 }
