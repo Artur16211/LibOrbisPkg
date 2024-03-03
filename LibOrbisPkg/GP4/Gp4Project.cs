@@ -168,6 +168,23 @@ namespace LibOrbisPkg.GP4
     }
 
     /// <summary>
+    /// Input the path parameter to represent the paths of targetPath and origPath, then generate a Gp4File and add it to the Items of files.
+    /// </summary>
+    /// <param name="path">the path parameter to represent the paths of targetPath and origPath</param>
+    public void AddFile(string path) => AddFile(path, path);
+    /// <summary>
+    /// Input the targetPath and origPath parameters, generate a Gp4File, and add it to the Items of files.
+    /// </summary>
+    /// <param name="targetPath">targetPath is the targ_path of Gp4File.</param>
+    /// <param name="origPath">OrigPath is the orig_path of Gp4File.</param>
+    public void AddFile(string targetPath, string origPath) => AddFile(new Gp4File(targetPath, origPath));
+    /// <summary>
+    /// Input the Gp4File parameter and add it to the Items of files.
+    /// </summary>
+    /// <param name="gp4File">Represents a file in the GP4 project.</param>
+    public void AddFile(Gp4File gp4File) => files.Items.Add(gp4File);
+
+    /// <summary>
     /// Creates a new directory under the given parent directory with the given name.
     /// </summary>
     /// <param name="parent">Parent directory for the new directory</param>
@@ -389,6 +406,15 @@ namespace LibOrbisPkg.GP4
     public string TargetPath;
     [XmlAttribute("orig_path")]
     public string OrigPath;
+
+    public Gp4File() { }
+
+    public Gp4File(string targetPath, string origPath) : this()
+    {
+      TargetPath = targetPath;
+      OrigPath = origPath;
+    }
+
     public string FileName => TargetPath.Substring(TargetPath.LastIndexOf('/') + 1);
     public string DirName => TargetPath.Substring(0, TargetPath.LastIndexOf('/') + 1);
   }

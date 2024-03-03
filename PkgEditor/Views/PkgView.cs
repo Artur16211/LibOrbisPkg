@@ -267,8 +267,16 @@ namespace PkgEditor.Views
 
     private void PreviewInnerPfsHeader(IMemoryReader innerPfs)
     {
-      var tp = new TabPage("Inner PFS Header");
-      var tv = new TreeView() { Dock = DockStyle.Fill };
+      var tp = new TabPage("Inner PFS Header")
+      { //Same as the attributes setting of the Outer PFS Tab.
+        Padding = new Padding(3),
+        UseVisualStyleBackColor = true
+      };
+      var tv = new TreeView()
+      {
+        Dock = DockStyle.Fill,
+        Padding = new Padding(3)
+      };
       ObjectPreview(PfsHeader.ReadFromStream(new StreamWrapper(innerPfs, 0x10000)), tv);
       tp.Controls.Add(tv);
       pkgHeaderTabControl.TabPages.Add(tp);
@@ -487,20 +495,49 @@ namespace PkgEditor.Views
       }
     }
 
+    Task<bool> exportTask = null;
     private void ExportGP4Project_Click(object sender, EventArgs e)
     {
+      if (!ExportGP4Project.Enabled) return;
+
       var sfd = new SaveFileDialog()
       {
         FileName = "Project.gp4",
         Filter = "GP4 Projects|Project.gp4",
         Title = "Choose a location for the exported PKG and project file",
       };
-      if (sfd.ShowDialog() == DialogResult.OK)
-      {
-        var outputDir = Path.GetDirectoryName(sfd.FileName);
-        LibOrbisPkg.GP4.Gp4Creator.CreateProjectFromPKG(outputDir, pkgFile, passcode);
-        MessageBox.Show("PKG Exported to " + outputDir);
-      }
+      if (sfd.ShowDialog() != DialogResult.OK) return;
+
+      ExportProgressBar.Visible = true;
+      ExportGP4Project.Enabled = false;
+      System.Diagnostics.Stopwatch tickerMajor = System.Diagnostics.Stopwatch.StartNew();
+
+      var outputDir = Path.GetDirectoryName(sfd.FileName);
+      exportTask = LibOrbisPkg.GP4.Gp4Creator.CreateProjectFromPKG(outputDir, pkgFile, passcode, tickerMajor,
+        //progress reporting using Async/Await: https://stackoverflow.com/a/19980151/22545576
+        new Progress<(int percent, string message)>(value => {
+          ExportProgressMsg.Text = value.message;
+          ExportProgressBar.Value = value.percent;
+        }));
+      exportTask.ContinueWith(t => {
+        if (t.Exception != null)
+        {
+          Invoke(new MethodInvoker(() => {
+            MessageBox.Show(this, "ExportGP4ProjectTask Exception", t.Exception.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
+          }));
+        }
+      }, TaskContinuationOptions.OnlyOnFaulted)
+      .ContinueWith(t => Invoke(new MethodInvoker(() => {
+        if (tickerMajor != null) tickerMajor.Stop();
+        ExportProgressMsg.Text = "PKG Exported to " + outputDir;
+        ExportProgressBar.Value = 100;
+        ExportProgressBar.Visible = false;
+        ExportGP4Project.Enabled = true;
+      })))
+      .ContinueWith(t => {
+        exportTask?.Dispose();
+        exportTask = null;
+      });
     }
   }
 }
