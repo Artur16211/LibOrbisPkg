@@ -117,16 +117,16 @@ namespace PkgEditor.Views
         tweak = null;
       }
 
-      foreach(var e in pkg.Metas.Metas)
+      foreach(var entrie in pkg.Metas.Metas)
       {
         var lvi = new ListViewItem(new[] {
-          e.id.ToString(),
-          string.Format("0x{0:X}", e.DataSize),
-          string.Format("0x{0:X}", e.DataOffset),
-          e.Encrypted ? "Yes" : "No",
-          e.KeyIndex.ToString(),
+          entrie.id.ToString(),
+          string.Format("0x{0:X}", entrie.DataSize),
+          string.Format("0x{0:X}", entrie.DataOffset),
+          entrie.Encrypted ? "Yes" : "No",
+          entrie.KeyIndex.ToString(),
         });
-        lvi.Tag = e;
+        lvi.Tag = entrie;
         entriesListView.Items.Add(lvi);
       }
     }
@@ -148,7 +148,10 @@ namespace PkgEditor.Views
         case Int16 _:
         case Int32 _:
         case Int64 _:
-          return string.Format("0x{0:X}", obj);
+          //Display the values of PKG Info's Header in both hexadecimal and decimal simultaneously.
+          string result = string.Format("0x{0:X}", obj);
+          if (result != "0x0") result += string.Format(" ( {0} )", obj);
+          return result;
         default:
           return obj.ToString();
       }
@@ -528,7 +531,7 @@ namespace PkgEditor.Views
         }
       }, TaskContinuationOptions.OnlyOnFaulted)
       .ContinueWith(t => Invoke(new MethodInvoker(() => {
-        if (tickerMajor != null) tickerMajor.Stop();
+        tickerMajor?.Stop();
         ExportProgressMsg.Text = "PKG Exported to " + outputDir;
         ExportProgressBar.Value = 100;
         ExportProgressBar.Visible = false;

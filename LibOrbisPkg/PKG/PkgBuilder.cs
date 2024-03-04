@@ -32,7 +32,7 @@ namespace LibOrbisPkg.PKG
     /// <param name="filename">Output filename</param>
     /// <param name="Logger">Log lines are written as calls to this function, if provided</param>
     /// <returns>Completed Pkg structure</returns>
-    public Pkg Write(string filename, Action<string> logger = null)
+    public Pkg Write(string filename, Action<string> logger = null, IProgress<(int percent, string message)> progress = null)
     {
       Logger = logger ?? Console.WriteLine;
       InitPkg();
@@ -42,15 +42,18 @@ namespace LibOrbisPkg.PKG
         FileMode.Create,
         mapName: null,
         totalSize);
+      progress?.Report((5, ""));
       if (pkg.Header.content_type != ContentType.AL)
       {
         outerPfs.WriteImage(pkgFile, (long)pkg.Header.pfs_image_offset);
+        progress?.Report((40, ""));
         if (pkg.Header.content_type == ContentType.GD)
         {
           Logger("Calculating PlayGo digests in parallel...");
           CalcPlaygoDigests(pkg, pkgFile);
         }
       }
+      progress?.Report((60, ""));
       using (var pkgStream = pkgFile.CreateViewStream(0, totalSize, MemoryMappedFileAccess.ReadWrite))
         FinishPkg(pkgStream);
 
@@ -121,7 +124,7 @@ namespace LibOrbisPkg.PKG
         pkg.Header.pfs_image_digest = Crypto.Sha256(pkgStream, (long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size);
       }
 
-      foreach(var a in pkg.CalcGeneralDigests())
+      foreach (var a in pkg.CalcGeneralDigests())
         pkg.GeneralDigests.Set(a.Key, a.Value);
 
       // Write body now because it will make calculating hashes easier.
@@ -299,7 +302,7 @@ namespace LibOrbisPkg.PKG
       pkg.HeaderDigest = new byte[32];
       pkg.HeaderSignature = new byte[0x100];
       pkg.EntryKeys = new KeysEntry(
-        project.ContentId, 
+        project.ContentId,
         project.Passcode);
       pkg.ImageKey = new GenericEntry(EntryId.IMAGE_KEY)
       {
@@ -312,7 +315,7 @@ namespace LibOrbisPkg.PKG
       pkg.LicenseDat = GenLicense();
       pkg.LicenseInfo = new GenericEntry(EntryId.LICENSE_INFO) { FileData = GenLicenseInfo() };
       var paramSfoFile = project.RootDir.GetFile("sce_sys/param.sfo");
-      if(paramSfoFile == null)
+      if (paramSfoFile == null)
       {
         throw new Exception("Missing param.sfo!");
       }
@@ -323,7 +326,7 @@ namespace LibOrbisPkg.PKG
         var sfo = SFO.ParamSfo.FromStream(paramSfo);
         pkg.ParamSfo = new SfoEntry(sfo);
         string date = "", time = "";
-        if(project.CreationDate == default)
+        if (project.CreationDate == default)
         {
           date = "c_date=" + DateTime.UtcNow.ToString("yyyyMMdd");
           if (project.UseCreationTime)
@@ -339,10 +342,10 @@ namespace LibOrbisPkg.PKG
           $",img0_l1_size=0" +
           $",img0_sc_ksize=512" +
           $",img0_pc_ksize=832" : "";
-        sfo["PUBTOOLINFO"] = new SFO.Utf8Value("PUBTOOLINFO", date+time+sizeInfo, 0x200);
+        sfo["PUBTOOLINFO"] = new SFO.Utf8Value("PUBTOOLINFO", date + time + sizeInfo, 0x200);
         sfo["PUBTOOLVER"] = new SFO.IntegerValue("PUBTOOLVER", 0x02890000);
       }
-      
+
       pkg.PsReservedDat = new GenericEntry(EntryId.PSRESERVED_DAT) { FileData = new byte[0x2000] };
       pkg.Entries = new List<Entry>
       {
@@ -370,13 +373,23 @@ namespace LibOrbisPkg.PKG
         });
       }
       pkg.Entries.AddRange(new Entry[]
-      { 
+      {
         pkg.LicenseDat,
         pkg.LicenseInfo,
         pkg.ParamSfo,
         pkg.PsReservedDat
       });
-      foreach(var file in project.RootDir.Dirs.Where(f => f.name == "sce_sys").First().Files.Where(f => EntryNames.NameToId.ContainsKey(f.name)))
+      var sceSysFSDir = project.RootDir.Dirs.Where(f => f.name == "sce_sys").First();
+      var sceSysEntrys = sceSysFSDir.Files.Where(f => EntryNames.NameToId.ContainsKey(f.name));
+      //var trophyFile = sceSysFSDir.Dirs.Where(f => f.name == "trophy")?.First()?.Files;
+      //var trophyEntry = trophyFile?.Where(f => EntryNames.NameToId.ContainsKey("trophy/" + f.name));
+      //foreach (var file in trophyEntry)
+      //{
+      //  var name = file.name;
+      //  var entry = new FileEntry(EntryNames.NameToId["trophy/" + name], file.Write, (uint)file.Size);
+      //  pkg.Entries.Add(entry);
+      //}
+      foreach (var file in sceSysEntrys)
       {
         var name = file.name;
         if (name == "param.sfo") continue;
@@ -455,8 +468,9 @@ namespace LibOrbisPkg.PKG
         // Important sizes for PlayGo ChunkDat
         pkg.ChunkSha.FileData = new byte[4 * (pkg.Header.package_size / 0x10000)];
         if (pkg.ChunkSha.FileData.Length > pkg.ChunkSha.meta.DataSize)
-        {
-          throw new Exception("Playgo Chunk hash file was not allocated enough space. Report this as a bug");
+        { // The mismatch in lengths between FileData and meta.DataSize may be related to errors in the calculation of hdr.Ndblock.
+          // When errors occur, removing one or two file entries from the gp4 file may resolve the mismatch. However, the exact reason is unclear.
+          throw new Exception(string.Format("Playgo Chunk hash file was not allocated enough space. Report this as a bug; FileData:{0:X} ( {0} ) > meta.DataSize:{1:X} ( {1} )", pkg.ChunkSha.FileData.Length, pkg.ChunkSha.meta.DataSize));
         }
         pkg.ChunkSha.meta.DataSize = (uint)pkg.ChunkSha.FileData.Length;
         pkg.ChunkDat.MchunkAttrs[0].size = pkg.Header.package_size;

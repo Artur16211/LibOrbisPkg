@@ -202,7 +202,7 @@ namespace PkgEditor.Views
       }
     }
 
-    private void buildPfs_Click(object sender, EventArgs e)
+    private void BuildPfs_Click(object sender, EventArgs e)
     {
       var ofd = new SaveFileDialog();
       ofd.Filter = "PFS Image|*.dat";
@@ -228,40 +228,49 @@ namespace PkgEditor.Views
       }
     }
 
-    private async void buildPkg_Click(object sender, EventArgs e)
+    private async void BuildPkg_Click(object sender, EventArgs e)
     {
+      if (!BuildPkgButton.Enabled) return;
+
       var validateResults = Gp4Validator.ValidateProject(proj, Path.GetDirectoryName(path));
       if (validateResults.Count != 0)
       {
         var validateDialog = new ValidationDialog(validateResults);
-        if (validateDialog.ShowDialog() == DialogResult.Cancel)
-        {
-          return;
-        }
+        if (validateDialog.ShowDialog() == DialogResult.Cancel) return;
       }
       var ofd = new SaveFileDialog();
       ofd.Filter = "PKG Image|*.pkg";
       ofd.Title = "Choose output path for PKG";
       ofd.FileName = proj.volume.Package.ContentId + ".pkg";
-      if (ofd.ShowDialog() == DialogResult.OK)
+      if (ofd.ShowDialog() != DialogResult.OK) return;
+
+      var logBox = new LogWindow();
+      var writer = logBox.GetWriter();
+      logBox.Show();
+      Action<string> LogLine = x => logBox.BeginInvoke(new Action(() => writer.WriteLine(x)));
+      GP4ProgressBar.Visible = true;
+      BuildPkgButton.Enabled = false;
+      IProgress<(int percent, string message)> progress = new Progress<(int percent, string message)>(value =>
       {
-        var logBox = new LogWindow();
-        var writer = logBox.GetWriter();
-        logBox.Show();
-        Action<string> LogLine = x => logBox.BeginInvoke(new Action(() => writer.WriteLine(x)));
-        try
-        {
-          await Task.Run(() => {
-            new PkgBuilder(PkgProperties.FromGp4(proj, Path.GetDirectoryName(path))).Write(ofd.FileName, LogLine);
-            LogLine($"Saved to {ofd.FileName}");
-          });
-        }
-        catch(Exception ex)
-        {
-          writer.WriteLine("Error: " + ex);
-          writer.WriteLine(ex.StackTrace);
-        }
+        GP4ProgressBar.Text = value.message;
+        GP4ProgressBar.Value = value.percent;
+      });
+      progress.Report((0, ""));
+      try
+      {
+        await Task.Run(() => {
+          new PkgBuilder(PkgProperties.FromGp4(proj, Path.GetDirectoryName(path))).Write(ofd.FileName, LogLine, progress);
+          LogLine($"Saved to {ofd.FileName}");
+        });
       }
+      catch (Exception ex)
+      {
+        writer.WriteLine("Error: " + ex);
+        writer.WriteLine(ex.StackTrace);
+      }
+      GP4ProgressBar.Value = 100;
+      GP4ProgressBar.Visible = false;
+      BuildPkgButton.Enabled = true;
     }
 
     private void filesListView_AfterLabelEdit(object sender, LabelEditEventArgs e)
