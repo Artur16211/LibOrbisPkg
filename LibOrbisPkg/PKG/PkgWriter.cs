@@ -16,7 +16,7 @@ namespace LibOrbisPkg.PKG
         s.Position = entry.meta.DataOffset;
         if (entry.meta.Encrypted)
         {
-          entry.WriteEncrypted(s, contentId, passcode);
+          entry.WriteEncrypted(s, contentId, passcode, entry.Name);
         }
         else
         {

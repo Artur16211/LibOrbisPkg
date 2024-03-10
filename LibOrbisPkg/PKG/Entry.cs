@@ -21,19 +21,32 @@ namespace LibOrbisPkg.PKG
     /// <summary>
     /// Writes the entry in an encrypted form to the given stream.
     /// </summary>
-    public void WriteEncrypted(Stream s, string contentId, string passcode)
+    public void WriteEncrypted(Stream s, string contentId, string passcode, string entryName = "")
     {
       var iv_key = Crypto.Sha256(
             meta.GetBytes()
             .Concat(Crypto.ComputeKeys(contentId, passcode, meta.KeyIndex))
             .ToArray());
-      var tmp = new byte[Length];
+      // Fixed the issue of "The input data is not a complete block"
+      var alignLength = Length % 16 > 0 ? Length + (16 - Length % 16) : Length;
+      var tmp = new byte[alignLength];
       using (var ms = new MemoryStream(tmp))
       {
         Write(ms);
       }
-      Crypto.AesCbcCfb128Encrypt(tmp, tmp, tmp.Length, iv_key.Skip(16).Take(16).ToArray(), iv_key.Take(16).ToArray());
-      s.Write(tmp, 0, tmp.Length);
+      try
+      {
+        Crypto.AesCbcCfb128Encrypt(tmp, tmp, tmp.Length, iv_key.Skip(16).Take(16).ToArray(), iv_key.Take(16).ToArray());
+        s.Write(tmp, 0, tmp.Length);
+      }
+      catch (Exception ex)
+      { // Change the exception message via reflection 
+        // https://stackoverflow.com/a/56458213/22545576
+        var type = ex.GetType();
+        var fieldInfo = type.GetField("_message", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        fieldInfo?.SetValue(ex, string.Format("\r\nAn exception occurred while writing the encrypted {0}...{1}", entryName, ex.Message));
+        throw;
+      }
     }
 
     private static byte[] Decrypt(byte[] entryBytes, byte[] keySeed, MetaEntry meta)

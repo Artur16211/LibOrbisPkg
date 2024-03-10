@@ -460,7 +460,8 @@ namespace PkgEditor.Views
             break;
         }
       }
-      var name = entry.NameTableOffset != 0 ? pkg.EntryNames.GetName(entry.NameTableOffset) : entry.id.ToString();
+      var name = entry.NameTableOffset != 0 ? pkg.EntryNames.GetName(entry.NameTableOffset) : (Enum.TryParse(entry.id.ToString(), out EntryId entryId) && 
+        EntryNames.IdToName.ContainsKey(entryId) ? EntryNames.IdToName[entryId] : entry.id.ToString());
       if (new SaveFileDialog() { FileName = name } is SaveFileDialog s && s.ShowDialog() == DialogResult.OK)
       {
         var totalEntrySize = entry.Encrypted ? (entry.DataSize + 15) & ~15 : entry.DataSize;
