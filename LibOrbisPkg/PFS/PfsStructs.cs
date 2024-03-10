@@ -112,7 +112,7 @@ namespace LibOrbisPkg.PFS
       hdr.InodeBlockSig = DinodeS64.ReadFromStream(s);
       if (hdr.Version != 1 || hdr.Magic != 0x1332A0B) //20130315=0x1332A0B
       {
-        throw new InvalidDataException($"Invalid PFS superblock version ({hdr.Version.ToString("X")}) or magic ({hdr.Magic.ToString("X")})");
+        throw new InvalidDataException($"Invalid PFS superblock version ({hdr.Version.ToString("X")}) or magic ({hdr.Magic.ToString("X")}), expected version: 1 and magic: 0x1332A0B");
       }
       s.Position = start + 0x370;
       hdr.Seed = s.ReadBytes(16);

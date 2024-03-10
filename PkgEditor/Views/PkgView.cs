@@ -39,9 +39,10 @@ namespace PkgEditor.Views
       if (path == null) return;
       pkgFile = MemoryMappedFile.CreateFromFile(path, FileMode.Open, mapName: null, 0, MemoryMappedFileAccess.Read);
       using (var s = pkgFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
-        ObjectPreview(new PkgReader(s).ReadHeader(), pkgHeaderTreeView);
-      using (var s = pkgFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
         pkg = new PkgReader(s).ReadPkg();
+      ObjectPreview(pkg.Header, pkgHeaderTreeView);
+      ObjectPreview(pkg.Metas, pkgHeaderTreeView, true);
+      ObjectPreview(string.Format("pkg.ChunkSha.FileData = 0x{0:X} ( {0} )", (4 * (pkg.Header.package_size / 0x10000))), pkgHeaderTreeView, true);
       try
       {
         using (var s = pkgFile.CreateViewStream((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read))
@@ -117,23 +118,29 @@ namespace PkgEditor.Views
         tweak = null;
       }
 
-      foreach(var entrie in pkg.Metas.Metas)
+      for (int idx = 0; idx < pkg.Metas.Metas.Count; idx++)
       {
+        var entrie = pkg.Metas.Metas[idx];
+        string flags = "";
+        if (entrie.Flags1 > 0) flags += string.Format("1:0x{0:X} ", entrie.Flags1);
+        if (entrie.Flags2 > 0) flags += string.Format("2:0x{0:X}", entrie.Flags2);
         var lvi = new ListViewItem(new[] {
-          entrie.id.ToString(),
+          string.Format("{0}. {1}", idx + 1, entrie.id),
           string.Format("0x{0:X}", entrie.DataSize),
           string.Format("0x{0:X}", entrie.DataOffset),
           entrie.Encrypted ? "Yes" : "No",
           entrie.KeyIndex.ToString(),
+          flags,
         });
         lvi.Tag = entrie;
         entriesListView.Items.Add(lvi);
       }
     }
 
-    void ObjectPreview(object obj, TreeView tv)
+    void ObjectPreview(object obj, TreeView tv, bool isAppend = false)
     {
-      tv.Nodes.Clear();
+      if (isAppend) tv.Nodes.Add("____________________");
+      else tv.Nodes.Clear();
       AddObjectNodes(obj, tv.Nodes);
     }
 
@@ -163,6 +170,11 @@ namespace PkgEditor.Views
     void AddObjectNodes(object obj, TreeNodeCollection nodes)
     {
       if (obj == null) return;
+      if (obj is string str)
+      {
+        nodes.Add(str);
+        return;
+      }
       var fields = obj.GetType().GetFields();
       foreach (var f in fields)
       {
@@ -515,8 +527,8 @@ namespace PkgEditor.Views
       ExportGP4Project.Enabled = false;
       System.Diagnostics.Stopwatch tickerMajor = System.Diagnostics.Stopwatch.StartNew();
 
-      var outputDir = Path.GetDirectoryName(sfd.FileName);
-      exportTask = LibOrbisPkg.GP4.Gp4Creator.CreateProjectFromPKG(outputDir, pkgFile, passcode, tickerMajor,
+      var outputDir = Path.GetDirectoryName(sfd.FileName.Replace("Project.gp4", pkg.Header.content_id + Path.DirectorySeparatorChar + "Project.gp4"));
+      exportTask = LibOrbisPkg.GP4.Gp4Creator.CreateProjectFromPKG(outputDir, pkgFile, passcode, DecryptEntryCheckBox.Checked, tickerMajor,
         //progress reporting using Async/Await: https://stackoverflow.com/a/19980151/22545576
         new Progress<(int percent, string message)>(value => {
           ExportProgressMsg.Text = value.message;

@@ -32,7 +32,7 @@ namespace LibOrbisPkg.GP4
       EntryId.PLAYGO_MANIFEST_XML,
     };
 
-    public static async Task<bool> CreateProjectFromPKG(string outputDir, MemoryMappedFile pkgFile, string passcode = null, 
+    public static async Task<bool> CreateProjectFromPKG(string outputDir, MemoryMappedFile pkgFile, string passcode = null, bool decryptEntry = true, 
       System.Diagnostics.Stopwatch tickerMajor = null, IProgress<(int percent, string message)> progress = null) => await Task.Run(() =>
     {
       Directory.CreateDirectory(outputDir);
@@ -99,7 +99,17 @@ namespace LibOrbisPkg.GP4
           string message = string.Format("{0}% Exporting {1}({2}MB)... Size:{3}/{4}MB, Count:{5}/{6}", percent, entryPath, s.Length / 1024 / 1024, currSize / 1024 / 1024, pkgSize / 1024 / 1024, currCnt, totCnt);
           if (tickerMajor != null) message += string.Format(" elapsed:{0:0.00}s", tickerMajor.Elapsed.TotalSeconds);
           progress?.Report((percent, message));
-          s.CopyTo(entryFile);
+
+          if (decryptEntry && meta.Encrypted && (passcode != null || meta.KeyIndex == 3))
+          {
+            var totalEntrySize = meta.Encrypted ? (meta.DataSize + 15) & ~15 : meta.DataSize;
+            var tmp = new byte[totalEntrySize];
+            s.Read(tmp, 0, tmp.Length);
+            tmp = meta.KeyIndex == 3 ? Entry.Decrypt(tmp, pkg, meta) : Entry.Decrypt(tmp, pkg.Header.content_id, passcode, meta);
+            entryFile.Write(tmp, 0, (int)meta.DataSize);
+          }
+          else s.CopyTo(entryFile);
+
           currCnt++;
           currSize += s.Length;
         }

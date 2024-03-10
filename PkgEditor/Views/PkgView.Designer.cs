@@ -56,24 +56,28 @@
             this.columnHeaderSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderOffset = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderEnc = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeaderKeyIdx = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeaderFlags = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.infoTab = new System.Windows.Forms.TabPage();
+            this.TableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.appVerLabelLabel = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.contentIdTextBox = new System.Windows.Forms.TextBox();
+            this.versionLabel = new System.Windows.Forms.Label();
+            this.label8 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.titleTextBox = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.typeLabel = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.sizeLabel = new System.Windows.Forms.Label();
+            this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.DecryptEntryCheckBox = new System.Windows.Forms.CheckBox();
+            this.appVerLabel = new System.Windows.Forms.Label();
             this.ExportProgressMsg = new System.Windows.Forms.Label();
             this.ExportProgressBar = new System.Windows.Forms.ProgressBar();
             this.ExportGP4Project = new System.Windows.Forms.Button();
-            this.appVerLabel = new System.Windows.Forms.Label();
-            this.appVerLabelLabel = new System.Windows.Forms.Label();
-            this.versionLabel = new System.Windows.Forms.Label();
-            this.sizeLabel = new System.Windows.Forms.Label();
-            this.typeLabel = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.titleTextBox = new System.Windows.Forms.TextBox();
-            this.contentIdTextBox = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
             this.pkgHeaderTabControl = new System.Windows.Forms.TabControl();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.pkgHeaderTreeView = new System.Windows.Forms.TreeView();
@@ -85,6 +89,8 @@
             this.filesTab.SuspendLayout();
             this.entriesTab.SuspendLayout();
             this.infoTab.SuspendLayout();
+            this.TableLayoutPanel1.SuspendLayout();
+            this.tableLayoutPanel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.pkgHeaderTabControl.SuspendLayout();
             this.tabPage3.SuspendLayout();
@@ -321,7 +327,8 @@
             this.columnHeaderSize,
             this.columnHeaderOffset,
             this.columnHeaderEnc,
-            this.columnHeader1});
+            this.columnHeaderKeyIdx,
+            this.columnHeaderFlags});
             this.entriesListView.ContextMenuStrip = this.contextMenuStrip1;
             this.entriesListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.entriesListView.FullRowSelect = true;
@@ -356,28 +363,22 @@
             this.columnHeaderEnc.Text = "Enc.";
             this.columnHeaderEnc.Width = 39;
             // 
-            // columnHeader1
+            // columnHeaderKeyIdx
             // 
-            this.columnHeader1.Text = "KeyIdx";
+            this.columnHeaderKeyIdx.Text = "KeyIdx";
+            // 
+            // columnHeaderFlags
+            // 
+            this.columnHeaderFlags.Text = "Flags";
+            this.columnHeaderFlags.Width = 120;
             // 
             // infoTab
             // 
+            this.infoTab.Controls.Add(this.TableLayoutPanel1);
             this.infoTab.Controls.Add(this.ExportProgressMsg);
             this.infoTab.Controls.Add(this.ExportProgressBar);
             this.infoTab.Controls.Add(this.ExportGP4Project);
-            this.infoTab.Controls.Add(this.appVerLabel);
-            this.infoTab.Controls.Add(this.appVerLabelLabel);
-            this.infoTab.Controls.Add(this.versionLabel);
-            this.infoTab.Controls.Add(this.sizeLabel);
-            this.infoTab.Controls.Add(this.typeLabel);
-            this.infoTab.Controls.Add(this.label8);
-            this.infoTab.Controls.Add(this.label6);
-            this.infoTab.Controls.Add(this.label5);
             this.infoTab.Controls.Add(this.pictureBox1);
-            this.infoTab.Controls.Add(this.titleTextBox);
-            this.infoTab.Controls.Add(this.contentIdTextBox);
-            this.infoTab.Controls.Add(this.label4);
-            this.infoTab.Controls.Add(this.label3);
             this.infoTab.Controls.Add(this.pkgHeaderTabControl);
             this.infoTab.Location = new System.Drawing.Point(4, 22);
             this.infoTab.Name = "infoTab";
@@ -386,6 +387,193 @@
             this.infoTab.TabIndex = 2;
             this.infoTab.Text = "Info";
             this.infoTab.UseVisualStyleBackColor = true;
+            // 
+            // TableLayoutPanel1
+            // 
+            this.TableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.TableLayoutPanel1.ColumnCount = 2;
+            this.TableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.TableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.TableLayoutPanel1.Controls.Add(this.appVerLabelLabel, 0, 5);
+            this.TableLayoutPanel1.Controls.Add(this.label3, 0, 0);
+            this.TableLayoutPanel1.Controls.Add(this.contentIdTextBox, 1, 0);
+            this.TableLayoutPanel1.Controls.Add(this.versionLabel, 1, 4);
+            this.TableLayoutPanel1.Controls.Add(this.label8, 0, 4);
+            this.TableLayoutPanel1.Controls.Add(this.label4, 0, 1);
+            this.TableLayoutPanel1.Controls.Add(this.titleTextBox, 1, 1);
+            this.TableLayoutPanel1.Controls.Add(this.label5, 0, 2);
+            this.TableLayoutPanel1.Controls.Add(this.typeLabel, 1, 2);
+            this.TableLayoutPanel1.Controls.Add(this.label6, 0, 3);
+            this.TableLayoutPanel1.Controls.Add(this.sizeLabel, 1, 3);
+            this.TableLayoutPanel1.Controls.Add(this.tableLayoutPanel2, 1, 5);
+            this.TableLayoutPanel1.Location = new System.Drawing.Point(2, 3);
+            this.TableLayoutPanel1.Name = "TableLayoutPanel1";
+            this.TableLayoutPanel1.RowCount = 6;
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.TableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.TableLayoutPanel1.Size = new System.Drawing.Size(349, 138);
+            this.TableLayoutPanel1.TabIndex = 21;
+            // 
+            // appVerLabelLabel
+            // 
+            this.appVerLabelLabel.AutoSize = true;
+            this.appVerLabelLabel.Dock = System.Windows.Forms.DockStyle.Right;
+            this.appVerLabelLabel.Location = new System.Drawing.Point(5, 119);
+            this.appVerLabelLabel.Margin = new System.Windows.Forms.Padding(3);
+            this.appVerLabelLabel.Name = "appVerLabelLabel";
+            this.appVerLabelLabel.Size = new System.Drawing.Size(64, 16);
+            this.appVerLabelLabel.TabIndex = 14;
+            this.appVerLabelLabel.Text = "App Version";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Cursor = System.Windows.Forms.Cursors.IBeam;
+            this.label3.Dock = System.Windows.Forms.DockStyle.Right;
+            this.label3.Location = new System.Drawing.Point(12, 3);
+            this.label3.Margin = new System.Windows.Forms.Padding(3);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(57, 19);
+            this.label3.TabIndex = 2;
+            this.label3.Text = "Content ID";
+            // 
+            // contentIdTextBox
+            // 
+            this.contentIdTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.contentIdTextBox.Location = new System.Drawing.Point(75, 0);
+            this.contentIdTextBox.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
+            this.contentIdTextBox.Name = "contentIdTextBox";
+            this.contentIdTextBox.ReadOnly = true;
+            this.contentIdTextBox.Size = new System.Drawing.Size(283, 22);
+            this.contentIdTextBox.TabIndex = 3;
+            // 
+            // versionLabel
+            // 
+            this.versionLabel.AutoSize = true;
+            this.versionLabel.Location = new System.Drawing.Point(75, 97);
+            this.versionLabel.Margin = new System.Windows.Forms.Padding(3);
+            this.versionLabel.Name = "versionLabel";
+            this.versionLabel.Size = new System.Drawing.Size(26, 12);
+            this.versionLabel.TabIndex = 13;
+            this.versionLabel.Text = "4.20";
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(3, 97);
+            this.label8.Margin = new System.Windows.Forms.Padding(3);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(66, 12);
+            this.label8.TabIndex = 9;
+            this.label8.Text = "PKG Version";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Cursor = System.Windows.Forms.Cursors.IBeam;
+            this.label4.Dock = System.Windows.Forms.DockStyle.Right;
+            this.label4.Location = new System.Drawing.Point(43, 28);
+            this.label4.Margin = new System.Windows.Forms.Padding(3);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(26, 19);
+            this.label4.TabIndex = 4;
+            this.label4.Text = "Title";
+            // 
+            // titleTextBox
+            // 
+            this.titleTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.titleTextBox.Location = new System.Drawing.Point(75, 25);
+            this.titleTextBox.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
+            this.titleTextBox.Name = "titleTextBox";
+            this.titleTextBox.ReadOnly = true;
+            this.titleTextBox.Size = new System.Drawing.Size(283, 22);
+            this.titleTextBox.TabIndex = 5;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Dock = System.Windows.Forms.DockStyle.Right;
+            this.label5.Location = new System.Drawing.Point(40, 53);
+            this.label5.Margin = new System.Windows.Forms.Padding(3);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(29, 16);
+            this.label5.TabIndex = 7;
+            this.label5.Text = "Type";
+            // 
+            // typeLabel
+            // 
+            this.typeLabel.AutoSize = true;
+            this.typeLabel.Location = new System.Drawing.Point(75, 53);
+            this.typeLabel.Margin = new System.Windows.Forms.Padding(3);
+            this.typeLabel.Name = "typeLabel";
+            this.typeLabel.Size = new System.Drawing.Size(32, 12);
+            this.typeLabel.TabIndex = 11;
+            this.typeLabel.Text = "Game";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Dock = System.Windows.Forms.DockStyle.Right;
+            this.label6.Location = new System.Drawing.Point(45, 75);
+            this.label6.Margin = new System.Windows.Forms.Padding(3);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(24, 16);
+            this.label6.TabIndex = 8;
+            this.label6.Text = "Size";
+            // 
+            // sizeLabel
+            // 
+            this.sizeLabel.AutoSize = true;
+            this.sizeLabel.Location = new System.Drawing.Point(75, 75);
+            this.sizeLabel.Margin = new System.Windows.Forms.Padding(3);
+            this.sizeLabel.Name = "sizeLabel";
+            this.sizeLabel.Size = new System.Drawing.Size(38, 12);
+            this.sizeLabel.TabIndex = 12;
+            this.sizeLabel.Text = "7.20 gj";
+            // 
+            // tableLayoutPanel2
+            // 
+            this.tableLayoutPanel2.ColumnCount = 2;
+            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tableLayoutPanel2.Controls.Add(this.DecryptEntryCheckBox, 1, 0);
+            this.tableLayoutPanel2.Controls.Add(this.appVerLabel, 0, 0);
+            this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(72, 116);
+            this.tableLayoutPanel2.Margin = new System.Windows.Forms.Padding(0);
+            this.tableLayoutPanel2.Name = "tableLayoutPanel2";
+            this.tableLayoutPanel2.RowCount = 1;
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(289, 22);
+            this.tableLayoutPanel2.TabIndex = 15;
+            // 
+            // DecryptEntryCheckBox
+            // 
+            this.DecryptEntryCheckBox.AutoSize = true;
+            this.DecryptEntryCheckBox.Checked = true;
+            this.DecryptEntryCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.DecryptEntryCheckBox.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.DecryptEntryCheckBox.Location = new System.Drawing.Point(113, 3);
+            this.DecryptEntryCheckBox.Name = "DecryptEntryCheckBox";
+            this.DecryptEntryCheckBox.Size = new System.Drawing.Size(173, 16);
+            this.DecryptEntryCheckBox.TabIndex = 20;
+            this.DecryptEntryCheckBox.Text = "Decrypt entry file during export";
+            this.DecryptEntryCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // appVerLabel
+            // 
+            this.appVerLabel.AutoSize = true;
+            this.appVerLabel.Location = new System.Drawing.Point(3, 3);
+            this.appVerLabel.Margin = new System.Windows.Forms.Padding(3);
+            this.appVerLabel.Name = "appVerLabel";
+            this.appVerLabel.Size = new System.Drawing.Size(26, 12);
+            this.appVerLabel.TabIndex = 15;
+            this.appVerLabel.Text = "4.20";
             // 
             // ExportProgressMsg
             // 
@@ -418,78 +606,6 @@
             this.ExportGP4Project.UseVisualStyleBackColor = true;
             this.ExportGP4Project.Click += new System.EventHandler(this.ExportGP4Project_Click);
             // 
-            // appVerLabel
-            // 
-            this.appVerLabel.AutoSize = true;
-            this.appVerLabel.Location = new System.Drawing.Point(67, 126);
-            this.appVerLabel.Name = "appVerLabel";
-            this.appVerLabel.Size = new System.Drawing.Size(26, 12);
-            this.appVerLabel.TabIndex = 15;
-            this.appVerLabel.Text = "4.20";
-            // 
-            // appVerLabelLabel
-            // 
-            this.appVerLabelLabel.AutoSize = true;
-            this.appVerLabelLabel.Location = new System.Drawing.Point(0, 126);
-            this.appVerLabelLabel.Name = "appVerLabelLabel";
-            this.appVerLabelLabel.Size = new System.Drawing.Size(64, 12);
-            this.appVerLabelLabel.TabIndex = 14;
-            this.appVerLabelLabel.Text = "App Version";
-            // 
-            // versionLabel
-            // 
-            this.versionLabel.AutoSize = true;
-            this.versionLabel.Location = new System.Drawing.Point(67, 105);
-            this.versionLabel.Name = "versionLabel";
-            this.versionLabel.Size = new System.Drawing.Size(26, 12);
-            this.versionLabel.TabIndex = 13;
-            this.versionLabel.Text = "4.20";
-            // 
-            // sizeLabel
-            // 
-            this.sizeLabel.AutoSize = true;
-            this.sizeLabel.Location = new System.Drawing.Point(67, 81);
-            this.sizeLabel.Name = "sizeLabel";
-            this.sizeLabel.Size = new System.Drawing.Size(38, 12);
-            this.sizeLabel.TabIndex = 12;
-            this.sizeLabel.Text = "7.20 gj";
-            // 
-            // typeLabel
-            // 
-            this.typeLabel.AutoSize = true;
-            this.typeLabel.Location = new System.Drawing.Point(67, 57);
-            this.typeLabel.Name = "typeLabel";
-            this.typeLabel.Size = new System.Drawing.Size(32, 12);
-            this.typeLabel.TabIndex = 11;
-            this.typeLabel.Text = "Game";
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(-3, 105);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(66, 12);
-            this.label8.TabIndex = 9;
-            this.label8.Text = "PKG Version";
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(37, 81);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(24, 12);
-            this.label6.TabIndex = 8;
-            this.label6.Text = "Size";
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(33, 57);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(29, 12);
-            this.label5.TabIndex = 7;
-            this.label5.Text = "Type";
-            // 
             // pictureBox1
             // 
             this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -499,46 +615,6 @@
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 6;
             this.pictureBox1.TabStop = false;
-            // 
-            // titleTextBox
-            // 
-            this.titleTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.titleTextBox.Location = new System.Drawing.Point(70, 30);
-            this.titleTextBox.Name = "titleTextBox";
-            this.titleTextBox.ReadOnly = true;
-            this.titleTextBox.Size = new System.Drawing.Size(281, 22);
-            this.titleTextBox.TabIndex = 5;
-            // 
-            // contentIdTextBox
-            // 
-            this.contentIdTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.contentIdTextBox.Location = new System.Drawing.Point(70, 6);
-            this.contentIdTextBox.Name = "contentIdTextBox";
-            this.contentIdTextBox.ReadOnly = true;
-            this.contentIdTextBox.Size = new System.Drawing.Size(281, 22);
-            this.contentIdTextBox.TabIndex = 3;
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Cursor = System.Windows.Forms.Cursors.IBeam;
-            this.label4.Location = new System.Drawing.Point(37, 33);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(26, 12);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "Title";
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Cursor = System.Windows.Forms.Cursors.IBeam;
-            this.label3.Location = new System.Drawing.Point(6, 8);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(57, 12);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Content ID";
             // 
             // pkgHeaderTabControl
             // 
@@ -620,6 +696,10 @@
             this.entriesTab.ResumeLayout(false);
             this.infoTab.ResumeLayout(false);
             this.infoTab.PerformLayout();
+            this.TableLayoutPanel1.ResumeLayout(false);
+            this.TableLayoutPanel1.PerformLayout();
+            this.tableLayoutPanel2.ResumeLayout(false);
+            this.tableLayoutPanel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.pkgHeaderTabControl.ResumeLayout(false);
             this.tabPage3.ResumeLayout(false);
@@ -649,7 +729,7 @@
     private System.Windows.Forms.ColumnHeader columnHeaderSize;
     private System.Windows.Forms.ColumnHeader columnHeaderOffset;
     private System.Windows.Forms.ColumnHeader columnHeaderEnc;
-    private System.Windows.Forms.ColumnHeader columnHeader1;
+    private System.Windows.Forms.ColumnHeader columnHeaderKeyIdx;
     private System.Windows.Forms.TabPage infoTab;
     private System.Windows.Forms.Button ExportGP4Project;
     private System.Windows.Forms.Label appVerLabel;
@@ -681,5 +761,9 @@
     private System.Windows.Forms.Button openWithXtsKeysBtn;
     private System.Windows.Forms.ProgressBar ExportProgressBar;
     private System.Windows.Forms.Label ExportProgressMsg;
+    private System.Windows.Forms.ColumnHeader columnHeaderFlags;
+    private System.Windows.Forms.CheckBox DecryptEntryCheckBox;
+    private System.Windows.Forms.TableLayoutPanel TableLayoutPanel1;
+    private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
   }
 }

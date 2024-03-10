@@ -247,19 +247,31 @@ namespace PkgEditor.Views
       var logBox = new LogWindow();
       var writer = logBox.GetWriter();
       logBox.Show();
-      Action<string> LogLine = x => logBox.BeginInvoke(new Action(() => writer.WriteLine(x)));
+      System.Diagnostics.Stopwatch tickerMajor = System.Diagnostics.Stopwatch.StartNew();
+      Action<object> LogLine = obj =>
+      {
+        string message = null;
+        double elapsed = tickerMajor.Elapsed.TotalSeconds;
+        if (obj is ValueTuple<string, int> msg)
+        {
+          message = msg.Item1;
+          Invoke(new MethodInvoker(() => { GP4ProgressBar.Value = msg.Item2; }));
+        }
+        else if (obj is int percent) Invoke(new MethodInvoker(() => { GP4ProgressBar.Value = percent; }));
+        else message = (string)obj;
+        if (!string.IsNullOrEmpty(message))
+        {
+          logBox.BeginInvoke(new Action(() => writer.WriteLine(elapsed > 100 ? string.Format("...total elapsed:{0:0.00}s", elapsed) : "")));
+          logBox.BeginInvoke(new Action(() => writer.Write(message)));
+        }
+      };
+      GP4ProgressBar.Value = 0;
       GP4ProgressBar.Visible = true;
       BuildPkgButton.Enabled = false;
-      IProgress<(int percent, string message)> progress = new Progress<(int percent, string message)>(value =>
-      {
-        GP4ProgressBar.Text = value.message;
-        GP4ProgressBar.Value = value.percent;
-      });
-      progress.Report((0, ""));
       try
       {
         await Task.Run(() => {
-          new PkgBuilder(PkgProperties.FromGp4(proj, Path.GetDirectoryName(path))).Write(ofd.FileName, LogLine, progress);
+          new PkgBuilder(PkgProperties.FromGp4(proj, Path.GetDirectoryName(path))).Write(ofd.FileName, LogLine);
           LogLine($"Saved to {ofd.FileName}");
         });
       }
@@ -271,6 +283,7 @@ namespace PkgEditor.Views
       GP4ProgressBar.Value = 100;
       GP4ProgressBar.Visible = false;
       BuildPkgButton.Enabled = true;
+      tickerMajor.Stop();
     }
 
     private void filesListView_AfterLabelEdit(object sender, LabelEditEventArgs e)

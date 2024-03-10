@@ -50,15 +50,15 @@ namespace LibOrbisPkg.PFS
     private Stack<BlockSigInfo> final_sigs = new Stack<BlockSigInfo>();
     private Stack<BlockSigInfo> data_sigs = new Stack<BlockSigInfo>();
 
-    Action<string> logger;
-    private void Log(string s) => logger?.Invoke(s);
+    Action<object> logger;
+    private void Log(object s) => logger?.Invoke(s);
 
     /// <summary>
     /// Constructs a PfsBuilder with the given properties and logger.
     /// </summary>
     /// <param name="p">Properties for the image to be built</param>
     /// <param name="logger">Function that is called to report realtime PFS build status.</param>
-    public PfsBuilder(PfsProperties p, Action<string> logger = null)
+    public PfsBuilder(PfsProperties p, Action<object> logger = null)
     {
       this.logger = logger;
       properties = p;
@@ -97,7 +97,8 @@ namespace LibOrbisPkg.PFS
 
       Log("Setting up filesystem structure...");
       allDirs = properties.root.GetAllChildrenDirs();
-      allFiles = properties.root.GetAllChildrenFiles().Where(f => f.Parent?.name != "sce_sys" || !PKG.EntryNames.NameToId.ContainsKey(f.name)).ToList();
+      // The trp file under the sce_sys/trophy/ directory should be considered an Entry rather than an FSFile.
+      allFiles = properties.root.GetAllChildrenFiles().Where(f => !f.FullPath().StartsWith("/sce_sys") || !PKG.EntryNames.NameToId.ContainsKey(f.FullPath().Replace("/sce_sys/", ""))).ToList();
       allNodes = new List<FSNode>(allDirs.OrderBy(d => d.FullPath()).ToList());
       allNodes.AddRange(allFiles);
 
@@ -202,6 +203,7 @@ namespace LibOrbisPkg.PFS
             view.WriteArray(position, Crypto.HmacSha256(signKey, sig_buffer), 0, 32);
             view.Write(position + 32, (int)sig.Block);
           }
+          Log(40); //Returning the current execution progress: 40%, PfsBuilder(WriteImage) => PkgBuilder(Write) => GP4View(BuildPkg)
         }
 
         if (hdr.Mode.HasFlag(PfsMode.Encrypted))
@@ -447,7 +449,7 @@ namespace LibOrbisPkg.PFS
       {
         // Include the header block in the total count
         hdr.Ndblock = 1;
-        var inodesPerBlock = hdr.BlockSize /DinodeD32.SizeOf;
+        var inodesPerBlock = hdr.BlockSize / DinodeD32.SizeOf;
         hdr.DinodeCount = inodes.Count;
         hdr.DinodeBlockCount = CeilDiv(inodes.Count, inodesPerBlock);
         hdr.InodeBlockSig.Blocks = (uint)hdr.DinodeBlockCount;

@@ -14,7 +14,7 @@ namespace LibOrbisPkg.PKG
   {
     private PkgProperties project;
     private byte[] EKPFS;
-    private Action<string> Logger;
+    private Action<object> Logger;
 
     private PFS.PfsBuilder innerPfs;
     private PFS.PfsBuilder outerPfs;
@@ -32,7 +32,7 @@ namespace LibOrbisPkg.PKG
     /// <param name="filename">Output filename</param>
     /// <param name="Logger">Log lines are written as calls to this function, if provided</param>
     /// <returns>Completed Pkg structure</returns>
-    public Pkg Write(string filename, Action<string> logger = null, IProgress<(int percent, string message)> progress = null)
+    public Pkg Write(string filename, Action<object> logger = null)
     {
       Logger = logger ?? Console.WriteLine;
       InitPkg();
@@ -42,18 +42,18 @@ namespace LibOrbisPkg.PKG
         FileMode.Create,
         mapName: null,
         totalSize);
-      progress?.Report((5, ""));
+      Logger(15); //Returning the current execution progress: 15%, PkgBuilder(Write) => GP4View(BuildPkg)
       if (pkg.Header.content_type != ContentType.AL)
       {
         outerPfs.WriteImage(pkgFile, (long)pkg.Header.pfs_image_offset);
-        progress?.Report((40, ""));
+        Logger(70); //Returning the current execution progress: 70%, PkgBuilder(Write) => GP4View(BuildPkg)
         if (pkg.Header.content_type == ContentType.GD)
         {
           Logger("Calculating PlayGo digests in parallel...");
           CalcPlaygoDigests(pkg, pkgFile);
         }
       }
-      progress?.Report((60, ""));
+      Logger(80); //Returning the current execution progress: 80%, PkgBuilder(Write) => GP4View(BuildPkg)
       using (var pkgStream = pkgFile.CreateViewStream(0, totalSize, MemoryMappedFileAccess.ReadWrite))
         FinishPkg(pkgStream);
 
@@ -68,7 +68,7 @@ namespace LibOrbisPkg.PKG
     /// <param name="s">Output PKG stream</param>
     /// <param name="logger">Log lines are written as calls to this function, if provided</param>
     /// <returns>Completed Pkg structure</returns>
-    public Pkg Write(Stream s, Action<string> logger = null)
+    public Pkg Write(Stream s, Action<object> logger = null)
     {
       Logger = logger ?? Console.WriteLine;
       s.SetLength(0);
@@ -102,9 +102,9 @@ namespace LibOrbisPkg.PKG
       {
         // Write PFS first, to get stream length
         Logger("Preparing inner PFS...");
-        innerPfs = new PFS.PfsBuilder(PFS.PfsProperties.MakeInnerPFSProps(project), x => Logger($" [innerpfs] {x}"));
+        innerPfs = new PFS.PfsBuilder(PFS.PfsProperties.MakeInnerPFSProps(project), x => Logger(x is int percent ? (object)percent : $" [innerpfs] {x}"));
         Logger("Preparing outer PFS...");
-        outerPfs = new PFS.PfsBuilder(PFS.PfsProperties.MakeOuterPFSProps(project, innerPfs, EKPFS), x => Logger($" [outerpfs] {x}"));
+        outerPfs = new PFS.PfsBuilder(PFS.PfsProperties.MakeOuterPFSProps(project, innerPfs, EKPFS), x => Logger(x is int percent ? (object)percent : $" [outerpfs] {x}"));
         Logger("Preparing PKG header and body...");
         BuildPkg(outerPfs.CalculatePfsSize());
       }
@@ -246,6 +246,7 @@ namespace LibOrbisPkg.PKG
     /// <summary>
     /// Creates the Pkg object. Initializes the header and body.
     /// </summary>
+    /// <param name="pfsSize">outerPfs.hdr.Ndblock * outerPfs.hdr.BlockSize</param>
     public void BuildPkg(long pfsSize)
     {
       pkg = new Pkg();
@@ -381,19 +382,14 @@ namespace LibOrbisPkg.PKG
       });
       var sceSysFSDir = project.RootDir.Dirs.Where(f => f.name == "sce_sys").First();
       var sceSysEntrys = sceSysFSDir.Files.Where(f => EntryNames.NameToId.ContainsKey(f.name));
-      //var trophyFile = sceSysFSDir.Dirs.Where(f => f.name == "trophy")?.First()?.Files;
-      //var trophyEntry = trophyFile?.Where(f => EntryNames.NameToId.ContainsKey("trophy/" + f.name));
-      //foreach (var file in trophyEntry)
-      //{
-      //  var name = file.name;
-      //  var entry = new FileEntry(EntryNames.NameToId["trophy/" + name], file.Write, (uint)file.Size);
-      //  pkg.Entries.Add(entry);
-      //}
+      if (sceSysFSDir.Dirs.Count > 0) // Handling folders under sce_sys, such as trophy.
+        sceSysEntrys = sceSysEntrys.Concat(sceSysFSDir.Dirs.SelectMany(f => f.Files)?.Where(f => EntryNames.NameToId.ContainsKey(f.FullPath().Replace("/sce_sys/", ""))));
+
       foreach (var file in sceSysEntrys)
       {
         var name = file.name;
         if (name == "param.sfo") continue;
-        var entry = new FileEntry(EntryNames.NameToId[name], file.Write, (uint)file.Size);
+        var entry = new FileEntry(EntryNames.NameToId[file.FullPath().Replace("/sce_sys/", "")], file.Write, (uint)file.Size);
         pkg.Entries.Add(entry);
       }
       pkg.Digests.FileData = new byte[pkg.Entries.Count * Pkg.HASH_SIZE];
@@ -414,16 +410,20 @@ namespace LibOrbisPkg.PKG
         { EntryId.ENTRY_NAMES, 0x40000000 },
         { EntryId.LICENSE_DAT, 0x80000000 },
         { EntryId.LICENSE_INFO, 0x80000000 },
+        { EntryId.NPTITLE_DAT, 0x80000000 },
+        { EntryId.NPBIND_DAT, 0x80000000 },
       };
       var keyMap = new Dictionary<EntryId, uint>
       {
         { EntryId.IMAGE_KEY, 3u << 12 },
         { EntryId.LICENSE_DAT, 3u << 12 },
         { EntryId.LICENSE_INFO, 2u << 12 },
+        { EntryId.NPTITLE_DAT, 3u << 12 },
+        { EntryId.NPBIND_DAT, 3u << 12 },
       };
       foreach (var entry in pkg.Entries)
       {
-        var e = new MetaEntry
+        var meta = new MetaEntry
         {
           id = entry.Id,
           NameTableOffset = pkg.EntryNames.GetOffset(entry.Name),
@@ -433,10 +433,10 @@ namespace LibOrbisPkg.PKG
           Flags1 = flagMap.GetOrDefault(entry.Id),
           Flags2 = keyMap.GetOrDefault(entry.Id),
         };
-        pkg.Metas.Metas.Add(e);
+        pkg.Metas.Metas.Add(meta);
         if(entry == pkg.Metas)
         {
-          e.DataSize = (uint)pkg.Entries.Count * 32;
+          meta.DataSize = (uint)pkg.Entries.Count * 32;
         }
         if(entry == pkg.ChunkSha)
         {
@@ -446,11 +446,11 @@ namespace LibOrbisPkg.PKG
             0x80000) + pfsSize;
           // Add the size of the chunk SHAs, plus an extra 16 bytes for good measure
           pkgSize += ((pkgSize + 16) / 0x10000) * 4;
-          e.DataSize = (uint)(pkgSize / 0x10000L) * 4;
+          meta.DataSize = (uint)(pkgSize / 0x10000L) * 4;
         }
 
-        dataOffset = Align(dataOffset + e.DataSize, 16);
-        entry.meta = e;
+        dataOffset = Align(dataOffset + meta.DataSize, 16);
+        entry.meta = meta;
       }
       ulong bodySize = dataOffset - pkg.Header.body_offset;
       pkg.Metas.Metas.Sort((e1, e2) => e1.id.CompareTo(e2.id));
@@ -468,9 +468,13 @@ namespace LibOrbisPkg.PKG
         // Important sizes for PlayGo ChunkDat
         pkg.ChunkSha.FileData = new byte[4 * (pkg.Header.package_size / 0x10000)];
         if (pkg.ChunkSha.FileData.Length > pkg.ChunkSha.meta.DataSize)
-        { // The mismatch in lengths between FileData and meta.DataSize may be related to errors in the calculation of hdr.Ndblock.
-          // When errors occur, removing one or two file entries from the gp4 file may resolve the mismatch. However, the exact reason is unclear.
-          throw new Exception(string.Format("Playgo Chunk hash file was not allocated enough space. Report this as a bug; FileData:{0:X} ( {0} ) > meta.DataSize:{1:X} ( {1} )", pkg.ChunkSha.FileData.Length, pkg.ChunkSha.meta.DataSize));
+        { // If FileData and meta.DataSize lengths not matching in PkgBuilder, one known cause of mismatches in lengths
+          // is the use of Align when calculating the DataOffset of MetaEntry and body_size of Header.
+          // If the Align feature is not used, the sizes would match, but this may not necessarily be the root cause of the mismatch.
+          string errorMsg = string.Format("Playgo Chunk hash file was not allocated enough space. " +
+            "Report this as a bug; FileData:{0:X} ( {0} ) > meta.DataSize:{1:X} ( {1} )", 
+            pkg.ChunkSha.FileData.Length, pkg.ChunkSha.meta.DataSize);
+          throw new Exception(errorMsg);
         }
         pkg.ChunkSha.meta.DataSize = (uint)pkg.ChunkSha.FileData.Length;
         pkg.ChunkDat.MchunkAttrs[0].size = pkg.Header.package_size;
