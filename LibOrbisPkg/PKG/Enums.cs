@@ -752,8 +752,63 @@ namespace LibOrbisPkg.PKG
       {
         NameToId.Add(kv.Value, kv.Key);
       }
+
+      EntriesNameOrder = new List<string>
+      {
+        EntryNames.IdToName[EntryId.ENTRY_KEYS],
+        EntryNames.IdToName[EntryId.IMAGE_KEY],
+        EntryNames.IdToName[EntryId.GENERAL_DIGESTS],
+        EntryNames.IdToName[EntryId.METAS],
+        EntryNames.IdToName[EntryId.DIGESTS],
+        EntryNames.IdToName[EntryId.ENTRY_NAMES],
+        EntryNames.IdToName[EntryId.PLAYGO_CHUNK_DAT],
+        EntryNames.IdToName[EntryId.PLAYGO_CHUNK_SHA],
+        EntryNames.IdToName[EntryId.PLAYGO_MANIFEST_XML],
+        EntryNames.IdToName[EntryId.LICENSE_DAT],
+        EntryNames.IdToName[EntryId.LICENSE_INFO],
+        EntryNames.IdToName[EntryId.PARAM_SFO],
+        EntryNames.IdToName[(EntryId)(int)EntryId.ICON0_PNG]
+      };
+      for (var i = 0; i < 31; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.ICON0_00_PNG + i)]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PIC0_PNG]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PIC1_PNG]);
+      for (var i = 0; i < 31; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.PIC1_00_PNG + i)]);
+
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.ICON0_DDS]);
+      for (var i = 0; i < 31; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.ICON0_00_DDS + i)]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PIC0_DDS]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PIC1_DDS]);
+      for (var i = 0; i < 31; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.PIC1_00_DDS + i)]);
+
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PRONUNCIATION_XML]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.PRONUNCIATION_SIG]);
+      EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)(int)EntryId.CHANGEINFO__CHANGEINFO_XML]);
+      for (var i = 0; i < 31; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.CHANGEINFO__CHANGEINFO_00_XML + i)]);
+      for (var i = 0; i < 100; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.TROPHY__TROPHY00_TRP + i)]);
+      for (var i = 0; i < 10; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.KEYMAP_RP__001_PNG + i)]);
+      for (var i = 0; i < 10; i++)
+        EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.KEYMAP_RP__001_PNG + i)]);
+      for (var i = 0; i < 31; i++)
+        for (var j = 0; j < 10; j++)
+          EntriesNameOrder.Add(EntryNames.IdToName[(EntryId)((int)EntryId.KEYMAP_RP__00__001_PNG + (16 * i) + j)]);
+
+      EntriesNameOrder.AddRange(new List<string>() {
+        EntryNames.IdToName[EntryId.SHAREPARAM_JSON],
+        EntryNames.IdToName[EntryId.SHAREOVERLAYIMAGE_PNG],
+        EntryNames.IdToName[EntryId.NPTITLE_DAT],
+        EntryNames.IdToName[EntryId.NPBIND_DAT],
+        EntryNames.IdToName[EntryId.PSRESERVED_DAT],
+      });
     }
     public static Dictionary<string, EntryId> NameToId;
     public static Dictionary<EntryId, string> IdToName;
+    public static List<string> EntriesNameOrder;
   }
 }

@@ -352,7 +352,7 @@ namespace PkgEditor.Views
 
     private void entriesListView_DoubleClick(object sender, EventArgs e)
     {
-      if(entriesListView.SelectedItems[0].SubItems[0].Text == "PARAM_SFO")
+      if (entriesListView.SelectedItems[0].Tag is MetaEntry meta && meta.id.ToString() == "PARAM_SFO")
       {
         mainWin.OpenTab(new SFOView(pkg.ParamSfo.ParamSfo, true), "param.sfo [Read-Only]");
       }

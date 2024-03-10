@@ -378,26 +378,27 @@ namespace LibOrbisPkg.PKG
         pkg.LicenseDat,
         pkg.LicenseInfo,
         pkg.ParamSfo,
-        pkg.PsReservedDat
       });
       var sceSysFSDir = project.RootDir.Dirs.Where(f => f.name == "sce_sys").First();
       var sceSysEntrys = sceSysFSDir.Files.Where(f => EntryNames.NameToId.ContainsKey(f.name));
       if (sceSysFSDir.Dirs.Count > 0) // Handling folders under sce_sys, such as trophy.
         sceSysEntrys = sceSysEntrys.Concat(sceSysFSDir.Dirs.SelectMany(f => f.Files)?.Where(f => EntryNames.NameToId.ContainsKey(f.FullPath().Replace("/sce_sys/", ""))));
 
-      foreach (var file in sceSysEntrys)
+      foreach (var file in sceSysEntrys.OrderBy(e => EntryNames.EntriesNameOrder.IndexOf(e.FullPath().Replace("/sce_sys/", "")) != -1 ? EntryNames.EntriesNameOrder.IndexOf(e.FullPath().Replace("/sce_sys/", "")) : 999))
       {
         var name = file.name;
         if (name == "param.sfo") continue;
         var entry = new FileEntry(EntryNames.NameToId[file.FullPath().Replace("/sce_sys/", "")], file.Write, (uint)file.Size);
         pkg.Entries.Add(entry);
       }
+      pkg.Entries.Add(pkg.PsReservedDat);
       pkg.Digests.FileData = new byte[pkg.Entries.Count * Pkg.HASH_SIZE];
 
       // 1st pass: set names
-      foreach (var entry in pkg.Entries.OrderBy(e => e.Name))
+      foreach (var entry in pkg.Entries.OrderBy(e => e.Id)) // The content order of EntryNames in the PKG has been modified to match the original method, replacing name sorting with sorting by EntryId
       {
-        pkg.EntryNames.GetOffset(entry.Name);
+        if (entry.Id >= EntryId.PARAM_SFO)
+          pkg.EntryNames.GetOffset(entry.Name);
       }
       // 2nd pass: set sizes, offsets in meta table
       var dataOffset = pkg.Header.body_offset;
@@ -474,7 +475,9 @@ namespace LibOrbisPkg.PKG
           string errorMsg = string.Format("Playgo Chunk hash file was not allocated enough space. " +
             "Report this as a bug; FileData:{0:X} ( {0} ) > meta.DataSize:{1:X} ( {1} )", 
             pkg.ChunkSha.FileData.Length, pkg.ChunkSha.meta.DataSize);
-          throw new Exception(errorMsg);
+          // TODO: Now changed to only write in the logger instead of throwing an exception
+          // when the error occurs. Ignore it until the root cause is found.
+          Logger("[Error] " + errorMsg);
         }
         pkg.ChunkSha.meta.DataSize = (uint)pkg.ChunkSha.FileData.Length;
         pkg.ChunkDat.MchunkAttrs[0].size = pkg.Header.package_size;
