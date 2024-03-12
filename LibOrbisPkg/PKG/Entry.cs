@@ -23,12 +23,17 @@ namespace LibOrbisPkg.PKG
     /// </summary>
     public void WriteEncrypted(Stream s, string contentId, string passcode, string entryName = "")
     {
+      WriteEncryptedKeySeed(s, Crypto.ComputeKeys(contentId, passcode, meta.KeyIndex), entryName);
+    }
+
+    public void WriteEncryptedKeySeed(Stream s, byte[] keySeed, string entryName = "")
+    {
       var iv_key = Crypto.Sha256(
             meta.GetBytes()
-            .Concat(Crypto.ComputeKeys(contentId, passcode, meta.KeyIndex))
+            .Concat(keySeed)
             .ToArray());
       // Fixed the issue of "The input data is not a complete block"
-      var alignLength = Length % 16 > 0 ? Length + (16 - Length % 16) : Length;
+      var alignLength = (Length + 15) & ~15;
       var tmp = new byte[alignLength];
       using (var ms = new MemoryStream(tmp))
       {

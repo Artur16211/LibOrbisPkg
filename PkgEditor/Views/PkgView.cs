@@ -40,9 +40,20 @@ namespace PkgEditor.Views
       pkgFile = MemoryMappedFile.CreateFromFile(path, FileMode.Open, mapName: null, 0, MemoryMappedFileAccess.Read);
       using (var s = pkgFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
         pkg = new PkgReader(s).ReadPkg();
+      var pkgEntriesSum = pkg.Metas.Metas.Sum(meat => meat.DataSize);
+      var pkgChunkShaFileData = 4 * (pkg.Header.package_size / 0x10000);
+      var pkgSize = (long)pkg.Header.body_offset + pkgEntriesSum + (long)pkg.Header.pfs_image_size; // pfs_image_size(pfsSize) = OuterPfs.Ndblock * BlockSize
+      pkgSize += ((pkgSize + 16) / 0x10000) * 4;
+      var pkgMetaDataSize = (uint)(pkgSize / 0x10000L) * 4;
       ObjectPreview(pkg.Header, pkgHeaderTreeView);
       ObjectPreview(pkg.Metas, pkgHeaderTreeView, true);
-      ObjectPreview(string.Format("pkg.ChunkSha.FileData = 0x{0:X} ( {0} )", (4 * (pkg.Header.package_size / 0x10000))), pkgHeaderTreeView, true);
+      ObjectPreview(new string[] {
+            string.Format("pkg.Metas.Metas.Sum = 0x{0:X} ( {0} )", pkgEntriesSum),
+            string.Format("pkg Size = 0x{0:X} ( {0} )", pkgSize),
+            string.Format("pkg.ChunkSha.FileData = 0x{0:X} ( {0} )", pkgChunkShaFileData),
+            string.Format("pkg.ChunkSha.meta.DataSize = 0x{0:X} ( {0} )", pkgMetaDataSize),
+            
+          }, pkgHeaderTreeView, true);
       try
       {
         using (var s = pkgFile.CreateViewStream((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read))
@@ -125,9 +136,9 @@ namespace PkgEditor.Views
         if (entrie.Flags1 > 0) flags += string.Format("1:0x{0:X} ", entrie.Flags1);
         if (entrie.Flags2 > 0) flags += string.Format("2:0x{0:X}", entrie.Flags2);
         var lvi = new ListViewItem(new[] {
-          string.Format("{0}. {1}", idx + 1, entrie.id),
-          string.Format("0x{0:X}", entrie.DataSize),
-          string.Format("0x{0:X}", entrie.DataOffset),
+          string.Format("{0:00}. {1}", idx + 1, entrie.id),
+          string.Format("0x{0:X} ( {0} )", entrie.DataSize),
+          string.Format("0x{0:X} ( {0} )", entrie.DataOffset),
           entrie.Encrypted ? "Yes" : "No",
           entrie.KeyIndex.ToString(),
           flags,
@@ -137,9 +148,12 @@ namespace PkgEditor.Views
       }
     }
 
-    void ObjectPreview(object obj, TreeView tv, bool isAppend = false)
+    void ObjectPreview(object obj, TreeView tv, bool isAppend = false, bool isAppendAddDivider = true)
     {
-      if (isAppend) tv.Nodes.Add("____________________");
+      if (isAppend)
+      {
+        if (isAppendAddDivider) tv.Nodes.Add("____________________");
+      }
       else tv.Nodes.Clear();
       AddObjectNodes(obj, tv.Nodes);
     }
@@ -173,6 +187,11 @@ namespace PkgEditor.Views
       if (obj is string str)
       {
         nodes.Add(str);
+        return;
+      }
+      if (obj is Object[] objArr)
+      {
+        foreach (Object o1 in objArr) nodes.Add((string)o1);
         return;
       }
       var fields = obj.GetType().GetFields();

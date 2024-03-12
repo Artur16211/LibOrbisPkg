@@ -166,7 +166,10 @@ namespace LibOrbisPkg.PFS
     /// </summary>
     /// <param name="file">The memory mapped file</param>
     /// <param name="offset">Start offset of the PFS image in the file</param>
-    public void WriteImage(MemoryMappedFile file, long offset)
+    /// <param name="newCrypt">
+    /// Generate using the old method when pfs_flags is 0x80000000000003CC, 
+    /// Generate using the new method when pfs_flags is 0xA0000000000003CC</param>
+    public void WriteImage(MemoryMappedFile file, long offset, bool newCrypt = false)
     {
       using (var viewStream = file.CreateViewStream(offset, CalculatePfsSize(), MemoryMappedFileAccess.ReadWrite))
       {
@@ -209,7 +212,7 @@ namespace LibOrbisPkg.PFS
         if (hdr.Mode.HasFlag(PfsMode.Encrypted))
         {
           Log("Encrypting in parallel...");
-          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
+          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed, newCrypt);
           Parallel.ForEach(
             // generates sector indices for each sector to be encrypted
             XtsSectorGen(),
@@ -234,7 +237,7 @@ namespace LibOrbisPkg.PFS
     /// <summary>
     /// Writes the PFS image to the given stream
     /// </summary>
-    public void WriteImage(Stream stream)
+    public void WriteImage(Stream stream, bool newCrypt = false)
     {
       WriteData(stream);
 
@@ -256,7 +259,7 @@ namespace LibOrbisPkg.PFS
       if (hdr.Mode.HasFlag(PfsMode.Encrypted))
       {
         Log("Encrypting...");
-        (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed);
+        (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed, newCrypt);
         var transformer = new XtsBlockTransform(dataKey, tweakKey);
         byte[] sectorBuffer = new byte[xtsSectorSize];
         foreach (var xtsSector in XtsSectorGen())

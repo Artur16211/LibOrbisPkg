@@ -16,7 +16,9 @@ namespace LibOrbisPkg.PKG
         s.Position = entry.meta.DataOffset;
         if (entry.meta.Encrypted)
         {
-          entry.WriteEncrypted(s, contentId, passcode, entry.Name);
+          if ((entry.Id == EntryId.NPBIND_DAT || entry.Id == EntryId.NPTITLE_DAT) && entry.meta.KeyIndex == 3)
+            entry.WriteEncryptedKeySeed(s, Crypto.RSA2048Decrypt(pkg.EntryKeys.Keys[3].key, RSAKeyset.PkgDerivedKey3Keyset), entry.Id.ToString());
+          else entry.WriteEncrypted(s, contentId, passcode, entry.Id.ToString());
         }
         else
         {

@@ -45,7 +45,7 @@ namespace LibOrbisPkg.PKG
       Logger(15); //Returning the current execution progress: 15%, PkgBuilder(Write) => GP4View(BuildPkg)
       if (pkg.Header.content_type != ContentType.AL)
       {
-        outerPfs.WriteImage(pkgFile, (long)pkg.Header.pfs_image_offset);
+        outerPfs.WriteImage(pkgFile, (long)pkg.Header.pfs_image_offset, (pkg.Header.pfs_flags & 0x2000000000000000UL) != 0);
         Logger(70); //Returning the current execution progress: 70%, PkgBuilder(Write) => GP4View(BuildPkg)
         if (pkg.Header.content_type == ContentType.GD)
         {
@@ -287,7 +287,7 @@ namespace LibOrbisPkg.PKG
       if (pkg.Header.content_type != ContentType.AL)
       {
         pkg.Header.pfs_image_count = 1;
-        pkg.Header.pfs_flags = 0x80000000000003CC;
+        pkg.Header.pfs_flags = 0x80000000000003CC; //Generate using the new method when pfs_flags is 0xA0000000000003CC
         pkg.Header.pfs_image_offset = 0x80000;
         pkg.Header.pfs_image_size = (ulong)pfsSize;
         pkg.Header.mount_image_offset = 0;
@@ -411,23 +411,23 @@ namespace LibOrbisPkg.PKG
         { EntryId.ENTRY_NAMES, 0x40000000 },
         { EntryId.LICENSE_DAT, 0x80000000 },
         { EntryId.LICENSE_INFO, 0x80000000 },
-        { EntryId.NPTITLE_DAT, 0x80000000 },
-        { EntryId.NPBIND_DAT, 0x80000000 },
+        //{ EntryId.NPTITLE_DAT, 0x80000000 },
+        //{ EntryId.NPBIND_DAT, 0x80000000 },
       };
       var keyMap = new Dictionary<EntryId, uint>
       {
         { EntryId.IMAGE_KEY, 3u << 12 },
         { EntryId.LICENSE_DAT, 3u << 12 },
         { EntryId.LICENSE_INFO, 2u << 12 },
-        { EntryId.NPTITLE_DAT, 3u << 12 },
-        { EntryId.NPBIND_DAT, 3u << 12 },
+        //{ EntryId.NPTITLE_DAT, 3u << 12 },
+        //{ EntryId.NPBIND_DAT, 3u << 12 },
       };
       foreach (var entry in pkg.Entries)
       {
         var meta = new MetaEntry
         {
           id = entry.Id,
-          NameTableOffset = pkg.EntryNames.GetOffset(entry.Name),
+          NameTableOffset = entry.Id >= EntryId.PARAM_SFO ? pkg.EntryNames.GetOffset(entry.Name) : 0,
           DataOffset = (uint)dataOffset,
           DataSize = entry.Length,
           // TODO

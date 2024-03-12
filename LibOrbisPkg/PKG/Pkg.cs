@@ -246,6 +246,12 @@ namespace LibOrbisPkg.PKG
     // TODO: i think these fields are actually members of element of container array
     public uint unk_0x400;
     public uint pfs_image_count;
+    /// <summary>
+    /// The pfs_flags value in the PKG's Header affects how the final key for PFS is generated.
+    /// When pfs_flags is 0x80000000000003CC, the old method is used for generation.
+    /// When pfs_flags is 0xA0000000000003CC, the new method is used.
+    /// Crypto.PfsGenEncKey => Crypto.PfsGenCryptoKey
+    /// </summary>
     public ulong pfs_flags;
     public ulong pfs_image_offset;
     public ulong pfs_image_size;
