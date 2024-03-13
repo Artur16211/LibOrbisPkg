@@ -14,8 +14,8 @@ namespace LibOrbisPkg.PFS
   public class PFSCReader : IMemoryReader
   {
     public const int Magic = 0x43534650;
+    public PFSCHdr Hdr { get; private set; }
     private IMemoryAccessor _accessor;
-    private PFSCHdr hdr;
     private long[] sectorMap;
 
     /// <summary>
@@ -26,7 +26,7 @@ namespace LibOrbisPkg.PFS
     public PFSCReader(IMemoryAccessor va)
     {
       _accessor = va;
-      _accessor.Read(0, out hdr);
+      _accessor.Read(0, out PFSCHdr hdr);
       if (hdr.Magic != Magic)
         throw new ArgumentException("Not a PFSC file: missing PFSC magic");
       if (hdr.Unk4 != 0)
@@ -39,6 +39,7 @@ namespace LibOrbisPkg.PFS
       var num_blocks = (int)(hdr.DataLength / hdr.BlockSz2);
       sectorMap = new long[num_blocks + 1];
       _accessor.ReadArray(hdr.BlockOffsets, sectorMap, 0, num_blocks + 1);
+      Hdr = hdr;
     }
 
     /// <summary>
@@ -52,7 +53,7 @@ namespace LibOrbisPkg.PFS
     public PFSCReader(IMemoryReader r) : this(new MemoryAccessor(r))
     { }
 
-    public int SectorSize => hdr.BlockSz;
+    public int SectorSize => Hdr.BlockSz;
     
     /// <summary>
     /// Reads the sector at the given index into the given byte array.
@@ -67,14 +68,14 @@ namespace LibOrbisPkg.PFS
       var sectorOffset = sectorMap[idx];
       var sectorSize = sectorMap[idx + 1] - sectorOffset;
 
-      if(sectorSize == hdr.BlockSz2)
+      if (sectorSize == Hdr.BlockSz2)
       {
         // fast case: uncompressed sector
-        _accessor.Read(sectorOffset, output, 0, hdr.BlockSz);
+        _accessor.Read(sectorOffset, output, 0, Hdr.BlockSz);
       }
-      else if (sectorSize > hdr.BlockSz2)
+      else if (sectorSize > Hdr.BlockSz2)
       {
-        Array.Clear(output, 0, hdr.BlockSz);
+        Array.Clear(output, 0, Hdr.BlockSz);
       }
       else
       {
@@ -102,14 +103,14 @@ namespace LibOrbisPkg.PFS
     
     private void Read(long src, long count, Action<byte[],int,int> Write)
     {
-      if (src + count > hdr.DataLength)
+      if (src + count > Hdr.DataLength)
         throw new ArgumentException("Attempt to read beyond end of file");
-      var sectorSize = hdr.BlockSz;
+      var sectorSize = Hdr.BlockSz;
       var sectorBuffer = new byte[sectorSize];
       var currentSector = (int)(src / sectorSize);
       var offsetIntoSector = (int)(src - (sectorSize * currentSector));
       ReadSector(currentSector, sectorBuffer);
-      while (count > 0 && src < hdr.DataLength)
+      while (count > 0 && src < Hdr.DataLength)
       {
         if (offsetIntoSector >= sectorSize)
         {
@@ -158,7 +159,7 @@ namespace LibOrbisPkg.PFS
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x30)]
-    private struct PFSCHdr
+    public struct PFSCHdr
     {
       public int Magic;
       public int Unk4;

@@ -58,6 +58,7 @@
             this.columnHeaderEnc = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderKeyIdx = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderFlags = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeaderNTabOffset = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.infoTab = new System.Windows.Forms.TabPage();
             this.TableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.appVerLabelLabel = new System.Windows.Forms.Label();
@@ -328,7 +329,8 @@
             this.columnHeaderOffset,
             this.columnHeaderEnc,
             this.columnHeaderKeyIdx,
-            this.columnHeaderFlags});
+            this.columnHeaderFlags,
+            this.columnHeaderNTabOffset});
             this.entriesListView.ContextMenuStrip = this.contextMenuStrip1;
             this.entriesListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.entriesListView.FullRowSelect = true;
@@ -371,6 +373,11 @@
             // 
             this.columnHeaderFlags.Text = "Flags";
             this.columnHeaderFlags.Width = 120;
+            // 
+            // columnHeaderNTabOffset
+            // 
+            this.columnHeaderNTabOffset.Text = "NameTableOffset";
+            this.columnHeaderNTabOffset.Width = 100;
             // 
             // infoTab
             // 
@@ -765,5 +772,6 @@
     private System.Windows.Forms.CheckBox DecryptEntryCheckBox;
     private System.Windows.Forms.TableLayoutPanel TableLayoutPanel1;
     private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
+    private System.Windows.Forms.ColumnHeader columnHeaderNTabOffset;
   }
 }

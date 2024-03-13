@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.IO.MemoryMappedFiles;
 using LibOrbisPkg.PFS;
 using LibOrbisPkg.SFO;
+using System.Text.RegularExpressions;
 
 namespace PkgEditor.Views
 {
@@ -46,14 +47,15 @@ namespace PkgEditor.Views
       pkgSize += ((pkgSize + 16) / 0x10000) * 4;
       var pkgMetaDataSize = (uint)(pkgSize / 0x10000L) * 4;
       ObjectPreview(pkg.Header, pkgHeaderTreeView);
-      ObjectPreview(pkg.Metas, pkgHeaderTreeView, true);
-      ObjectPreview(new string[] {
-            string.Format("pkg.Metas.Metas.Sum = 0x{0:X} ( {0} )", pkgEntriesSum),
-            string.Format("pkg Size = 0x{0:X} ( {0} )", pkgSize),
-            string.Format("pkg.ChunkSha.FileData = 0x{0:X} ( {0} )", pkgChunkShaFileData),
-            string.Format("pkg.ChunkSha.meta.DataSize = 0x{0:X} ( {0} )", pkgMetaDataSize),
-            
-          }, pkgHeaderTreeView, true);
+      ObjectPreview(pkg.Metas, pkgHeaderTreeView, true, true);
+      ObjectPreview(("pkg.EntryNames.NameList", (object)pkg.EntryNames.NameList), pkgHeaderTreeView, true);
+      ObjectPreview(("pkg.EntryNames.Names", (object)pkg.EntryNames.Names), pkgHeaderTreeView, true);
+      ObjectPreview(("pkg size info", (object)new string[] { 
+        string.Format("pkg.Metas.Metas.Sum = 0x{0:X} ( {0} )", pkgEntriesSum),
+        string.Format("pkg Size = 0x{0:X} ( {0} )", pkgSize),
+        string.Format("pkg.ChunkSha.FileData = 0x{0:X} ( {0} )", pkgChunkShaFileData),
+        string.Format("pkg.ChunkSha.meta.DataSize = 0x{0:X} ( {0} )", pkgMetaDataSize),
+      }), pkgHeaderTreeView, true);
       try
       {
         using (var s = pkgFile.CreateViewStream((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read))
@@ -142,13 +144,14 @@ namespace PkgEditor.Views
           entrie.Encrypted ? "Yes" : "No",
           entrie.KeyIndex.ToString(),
           flags,
+          string.Format("0x{0:X} ( {0} )", entrie.NameTableOffset),
         });
         lvi.Tag = entrie;
         entriesListView.Items.Add(lvi);
       }
     }
 
-    void ObjectPreview(object obj, TreeView tv, bool isAppend = false, bool isAppendAddDivider = true)
+    void ObjectPreview(object obj, TreeView tv, bool isAppend = false, bool isAppendAddDivider = false)
     {
       if (isAppend)
       {
@@ -189,41 +192,83 @@ namespace PkgEditor.Views
         nodes.Add(str);
         return;
       }
-      if (obj is Object[] objArr)
+
+      if (obj is ValueTuple<string, object> objTuple)
       {
-        foreach (Object o1 in objArr) nodes.Add((string)o1);
-        return;
+        AddNodes(objTuple.Item2, nodes, objTuple.Item1);
       }
-      var fields = obj.GetType().GetFields();
-      foreach (var f in fields)
+      else AddNodes(obj, nodes);
+    }
+
+    void AddNodes(object obj, TreeNodeCollection nodes, string descName = null)
+    {
+      if (obj is string str)
       {
-        if (f.IsLiteral) continue;
-        var val = f.GetValue(obj);
-        if (val is byte[] b)
+        if (!string.IsNullOrEmpty(descName)) str = string.Format("{0} {1}", descName, str);
+
+        nodes.Add(str);
+      }
+      else if(obj is Object[] objArr)
+      {
+        AddArrayNodes(objArr, string.IsNullOrEmpty(descName) ? "Array" : descName, nodes); //foreach (Object o1 in objArr) nodes.Add(toString(o1));
+      }
+      else if (obj is IList objList)
+      {
+        AddArrayNodes(objList.Cast<object>().ToArray(), string.IsNullOrEmpty(descName) ? "List" : descName, nodes); //foreach (Object o1 in objList) nodes.Add(toString(o1));
+      }
+      else if (obj is IDictionary objDict)
+      {
+        List<object> dictList = new List<object>();
+        foreach (DictionaryEntry o1 in objDict) dictList.Add(string.Format("{0} = {1}", toString(o1.Key), toString(o1.Value)));
+        AddArrayNodes(dictList.Cast<object>().ToArray(), string.IsNullOrEmpty(descName) ? "Dictionary" : descName, nodes);
+      }
+      else
+      {
+        var infoName = "";
+        var fields = obj.GetType().GetFields();
+        if (!string.IsNullOrEmpty(descName))
         {
-          nodes.Add(f.Name + " = " + LibOrbisPkg.Util.Crypto.AsHexCompact(b));
-        }
-        else if (f.FieldType.IsPrimitive || f.FieldType == typeof(string) || f.FieldType.IsEnum)
-        {
-          if (val != null)
+          infoName = descName + " ";
+          if (fields?.Length > 1)
           {
-            nodes.Add(f.Name + " = " + toString(val));
+
+            var val = Regex.IsMatch(descName, @"\[\d+\]") ? string.Format("{0}: {1}", fields[0].Name, fields[0].GetValue(obj)) : "";
+            var n = new TreeNode(descName + " " + val);
+            nodes.Add(n);
+            infoName = "";
+            nodes = n.Nodes;
           }
         }
-        else if (f.FieldType.IsArray)
+        foreach (var f in fields)
         {
-          AddArrayNodes(f.GetValue(obj) as Array, f.Name, nodes);
-        }
-        else if (f.FieldType.IsGenericType && f.FieldType.GetGenericTypeDefinition() == typeof(List<>))
-        {
-          var internalType = f.FieldType.GetGenericArguments()[0];
-          AddArrayNodes((f.GetValue(obj) as IList).Cast<object>().ToArray(), f.Name, nodes);
-        }
-        else
-        {
-          var node = new TreeNode(f.Name);
-          AddObjectNodes(f.GetValue(obj), node.Nodes);
-          nodes.Add(node);
+          if (f.IsLiteral) continue;
+          var val = f.GetValue(obj);
+          if (val is byte[] b)
+          {
+            nodes.Add(infoName + f.Name + " = " + LibOrbisPkg.Util.Crypto.AsHexCompact(b));
+          }
+          else if (f.FieldType.IsPrimitive || f.FieldType == typeof(string) || f.FieldType.IsEnum)
+          {
+            if (val != null)
+            {
+              nodes.Add(infoName + f.Name + " = " + toString(val));
+            }
+          }
+          else if (f.FieldType.IsArray)
+          {
+            AddArrayNodes(f.GetValue(obj) as Array, f.Name, nodes);
+          }
+          else if (f.FieldType.IsGenericType && f.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+          {
+            var internalType = f.FieldType.GetGenericArguments()[0];
+            AddArrayNodes((f.GetValue(obj) as IList).Cast<object>().ToArray(), f.Name, nodes);
+          }
+          else
+          {
+            var node = new TreeNode(f.Name);
+            AddObjectNodes(f.GetValue(obj), node.Nodes);
+            nodes.Add(node);
+          }
         }
       }
     }
@@ -238,12 +283,12 @@ namespace PkgEditor.Views
       if (eType.IsPrimitive || eType == typeof(string) || eType.IsEnum)
         for (var i = 0; i < arr.Length; i++)
         {
-          var n = new TreeNode($"{name}[{i}] = {toString(arr.GetValue(i))}");
+          var n = new TreeNode($"[{i:00}] {toString(arr.GetValue(i))}");
           node.Nodes.Add(n);
         }
       else for (var i = 0; i < arr.Length; i++)
         {
-          var myName = $"{name}[{i}]";
+          var myName = $"[{i:00}]";
           if (eType.IsArray)
             AddArrayNodes(arr.GetValue(i) as Array, myName, node.Nodes);
           else
@@ -255,10 +300,8 @@ namespace PkgEditor.Views
             {
               myName += $" (Name: {nameField.GetValue(obj)})";
             }
-            var n = new TreeNode(myName);
             var item = arr.GetValue(i);
-            AddObjectNodes(item, n.Nodes);
-            node.Nodes.Add(n);
+            AddObjectNodes((myName, (object)item), node.Nodes);
           }
         }
       nodes.Add(node);
@@ -281,6 +324,9 @@ namespace PkgEditor.Views
         va = pkgFile.CreateViewAccessor((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read);
         var outerPfs = new PfsReader(va, pkg.Header.pfs_flags, ekpfs, tweak, data);
         var innerPfsView = new PFSCReader(outerPfs.GetFile("pfs_image.dat").GetView());
+
+        ObjectPreview(("PFSC Header ( pfs_image.dat )", (object)innerPfsView.Hdr), pfsHeaderTreeView, true, true);
+
         PreviewInnerPfsHeader(innerPfsView);
         var inner = new PfsReader(innerPfsView);
         var view = new FileView();
@@ -309,7 +355,7 @@ namespace PkgEditor.Views
       var tv = new TreeView()
       {
         Dock = DockStyle.Fill,
-        Padding = new Padding(3)
+        Location = new Point(3, 3),
       };
       ObjectPreview(PfsHeader.ReadFromStream(new StreamWrapper(innerPfs, 0x10000)), tv);
       tp.Controls.Add(tv);

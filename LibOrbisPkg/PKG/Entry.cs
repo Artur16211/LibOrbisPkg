@@ -299,7 +299,7 @@ namespace LibOrbisPkg.PKG
     {
       int len = 0;
       Names = new Dictionary<string, int>();
-      nameList = names;
+      NameList = names;
       foreach(var n in names)
       {
         Names.Add(n, len);
@@ -307,8 +307,8 @@ namespace LibOrbisPkg.PKG
       }
     }
     private int length = 1;
-    private Dictionary<string, int> Names = new Dictionary<string, int> { { "", 0 } };
-    private List<string> nameList = new List<string> { "" };
+    public Dictionary<string, int> Names { get; private set; } = new Dictionary<string, int> { { "", 0 } };
+    public List<string> NameList { get; private set; } = new List<string> { "" };
     /// <summary>
     /// Gets the offset of a name, adding it to the table if it's not here already.
     /// </summary>
@@ -317,7 +317,7 @@ namespace LibOrbisPkg.PKG
       if (name == null || name == "") return 0;
       if(!Names.ContainsKey(name))
       {
-        nameList.Add(name);
+        NameList.Add(name);
         Names[name] = length;
         length += name.Length + 1;
       }
@@ -327,7 +327,7 @@ namespace LibOrbisPkg.PKG
     public string GetName(uint offset)
     {
       int s = 0;
-      foreach(var n in nameList)
+      foreach(var n in NameList)
       {
         if (s == offset) return n;
         s += n.Length + 1;
@@ -340,7 +340,7 @@ namespace LibOrbisPkg.PKG
     public override uint Length => (uint)length;
     public override void Write(Stream s)
     {
-      foreach(var k in nameList)
+      foreach(var k in NameList)
       {
         var bytes = Encoding.ASCII.GetBytes(k);
         s.Write(bytes, 0, bytes.Length);
