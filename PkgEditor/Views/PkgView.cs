@@ -231,7 +231,6 @@ namespace PkgEditor.Views
           infoName = descName + " ";
           if (fields?.Length > 1)
           {
-
             var val = Regex.IsMatch(descName, @"\[\d+\]") ? string.Format("{0}: {1}", fields[0].Name, fields[0].GetValue(obj)) : "";
             var n = new TreeNode(descName + " " + val);
             nodes.Add(n);
@@ -327,8 +326,29 @@ namespace PkgEditor.Views
 
         ObjectPreview(("PFSC Header ( pfs_image.dat )", (object)innerPfsView.Hdr), pfsHeaderTreeView, true, true);
 
-        PreviewInnerPfsHeader(innerPfsView);
+        TreeView innerTreeView = PreviewInnerPfsHeader(innerPfsView);
+
         var inner = new PfsReader(innerPfsView);
+
+        if (outerPfs.GetSuperRoot() is PfsReader.Dir outerRoot &&
+          outerRoot.GetPath("flat_path_table") is PfsReader.File outerFlatFile &&
+          outerRoot.GetPath("uroot") is PfsReader.Dir outerURoot &&
+          outerFlatFile.GetView() is IMemoryAccessor outerFlatAccessor)
+        {
+          var outFlatPathTable = new FlatPathTable(outerFlatAccessor, outerFlatFile.compressed_size, outerURoot);
+          ObjectPreview(("flat_path_table raw", (object)outFlatPathTable.HashMap), pfsHeaderTreeView, true);
+          ObjectPreview(("flat_path_table parse", (object)outFlatPathTable.FlatInfos), pfsHeaderTreeView, true);
+        }
+        if (inner.GetSuperRoot() is PfsReader.Dir innerRoot && 
+          innerRoot.GetPath("flat_path_table") is PfsReader.File innerFlatFile &&
+          innerRoot.GetPath("uroot") is PfsReader.Dir innerURoot &&
+          innerFlatFile.GetView() is IMemoryAccessor innerFlatAccessor)
+        {
+          var innerFlatPathTable = new FlatPathTable(innerFlatAccessor, innerFlatFile.compressed_size, innerURoot);
+          ObjectPreview(("flat_path_table raw", (object)innerFlatPathTable.HashMap), innerTreeView, true, true);
+          ObjectPreview(("flat_path_table parse", (object)innerFlatPathTable.FlatInfos), innerTreeView, true);
+        }
+
         var view = new FileView();
         view.AddRoot(outerPfs, "Outer PFS Image");
         view.AddRoot(inner, "Inner PFS Image");
@@ -345,7 +365,7 @@ namespace PkgEditor.Views
       return false;
     }
 
-    private void PreviewInnerPfsHeader(IMemoryReader innerPfs)
+    private TreeView PreviewInnerPfsHeader(IMemoryReader innerPfs)
     {
       var tp = new TabPage("Inner PFS Header")
       { //Same as the attributes setting of the Outer PFS Tab.
@@ -360,6 +380,8 @@ namespace PkgEditor.Views
       ObjectPreview(PfsHeader.ReadFromStream(new StreamWrapper(innerPfs, 0x10000)), tv);
       tp.Controls.Add(tv);
       pkgHeaderTabControl.TabPages.Add(tp);
+      
+      return tv;
     }
 
     private void openWithPasscodeBtn_Click(object sender, EventArgs e)
