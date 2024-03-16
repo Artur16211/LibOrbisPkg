@@ -29,6 +29,7 @@ namespace LibOrbisPkg.PFS
 
     public static (FlatPathTable, CollisionResolver) Create(List<FSNode> nodes)
     {
+      var flatInfos = new List<FlatInfo>();
       var hashMap = new SortedDictionary<uint, uint>();
       var nodeMap = new Dictionary<uint, List<FSNode>>();
       bool collision = false;
@@ -51,20 +52,21 @@ namespace LibOrbisPkg.PFS
           nodeMap[hash] = new List<FSNode>();
           nodeMap[hash].Add(n);
         }
+        flatInfos.Add(new FlatInfo(n.ino.Number, (FlatType)(hashMap[hash] & 0xF0000000u), n.FullPath(), new FlatRaw(hash, hashMap[hash])));
       }
       if(!collision)
       {
-        return (new FlatPathTable(hashMap), (CollisionResolver)null);
+        return (new FlatPathTable(hashMap, flatInfos), (CollisionResolver)null);
       }
 
       uint offset = 0;
       var colEnts = new List<List<PfsDirent>>();
-      foreach(var kv in hashMap.Where(kv => kv.Value == (uint)FlatType.Collision).ToList())
+      foreach(var info in flatInfos.Where(info => info.Type == FlatType.Collision)) //foreach(var kv in hashMap.Where(kv => kv.Value == (uint)FlatType.Collision).ToList())
       {
-        hashMap[kv.Key] = (uint)FlatType.Collision | offset;
+        info.Raw.Value = hashMap[info.Raw.Hash] = (uint)FlatType.Collision | offset;
         var entList = new List<PfsDirent>();
         colEnts.Add(entList);
-        foreach(var node in nodeMap[kv.Key])
+        foreach (var node in nodeMap[info.Raw.Hash])
         {
           var d = new PfsDirent()
           {
@@ -77,7 +79,8 @@ namespace LibOrbisPkg.PFS
         }
         offset += 0x18;
       }
-      return (new FlatPathTable(hashMap), new CollisionResolver(colEnts));
+
+      return (new FlatPathTable(hashMap, flatInfos), new CollisionResolver(colEnts));
     }
 
     public FlatPathTable(IMemoryAccessor r, long size, PfsReader.Dir root)
@@ -131,6 +134,12 @@ namespace LibOrbisPkg.PFS
     {
       public uint Hash;
       public uint Value;
+
+      public FlatRaw(uint hash, uint value)
+      {
+        Hash = hash;
+        Value = value;
+      }
     }
 
     public class FlatInfo
@@ -151,7 +160,7 @@ namespace LibOrbisPkg.PFS
       }
     }
 
-    public List<FlatInfo> FlatInfos {  get; private set; }
+    public List<FlatInfo> FlatInfos { get; private set; }
 
     public SortedDictionary<uint, uint> HashMap { get; private set; }
 
@@ -161,9 +170,18 @@ namespace LibOrbisPkg.PFS
     /// Construct a flat_path_table out of the given filesystem nodes.
     /// </summary>
     /// <param name="nodes"></param>
-    public FlatPathTable(SortedDictionary<uint, uint> hashMap)
+    public FlatPathTable(SortedDictionary<uint, uint> hashMap, List<FlatInfo> flatInfos = null)
     {
       HashMap = hashMap;
+      if (flatInfos == null) return;
+
+      flatInfos.Sort((FlatInfo a, FlatInfo b) => {
+        int compare;
+        compare = a.Type.CompareTo(b.Type);
+        if (compare == 0) compare = a.InodeNumber.CompareTo(b.InodeNumber);
+        return compare;
+      });
+      FlatInfos = flatInfos;
     }
 
     /// <summary>

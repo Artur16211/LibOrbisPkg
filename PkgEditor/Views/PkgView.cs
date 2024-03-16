@@ -58,6 +58,7 @@ namespace PkgEditor.Views
       }), pkgHeaderTreeView, true);
       try
       {
+        if (pkg.Header.pfs_image_size > 0) //The PKG might be an additional content package without extra data when pfs_image_size is 0.
         using (var s = pkgFile.CreateViewStream((long)pkg.Header.pfs_image_offset, (long)pkg.Header.pfs_image_size, MemoryMappedFileAccess.Read))
           ObjectPreview(PfsHeader.ReadFromStream(s), pfsHeaderTreeView);
       }
@@ -317,6 +318,8 @@ namespace PkgEditor.Views
       if (!pkg.CheckEkpfs(ekpfs) && (data == null || tweak == null))
         return false;
       if (va != null)
+        return false;
+      if (pkg.Header.pfs_image_size == 0) //The PKG might be an additional content package without extra data when pfs_image_size is 0.
         return false;
       try
       {
