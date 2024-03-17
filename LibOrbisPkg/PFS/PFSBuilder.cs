@@ -99,17 +99,7 @@ namespace LibOrbisPkg.PFS
       allDirs = properties.root.GetAllChildrenDirs();
       // The trp file under the sce_sys/trophy/ directory should be considered an Entry rather than an FSFile.
       allFiles = properties.root.GetAllChildrenFiles().Where(f => !f.FullPath().StartsWith("/sce_sys") || !PKG.EntryNames.NameToId.ContainsKey(f.FullPath().Replace("/sce_sys/", ""))).ToList();
-      allFiles.Sort((FSFile aNode, FSFile bNode) =>
-      {
-        string aPath = aNode.FullPath().Replace(aNode.name, "") + "zzzzzzzzzz/"; // The path processing here is because the original sorting method places files with fewer folder layers towards the end.
-        string bPath = bNode.FullPath().Replace(bNode.name, "") + "zzzzzzzzzz/"; // For example, files located in the root directory like "/eboot.bin" will be sorted after all folders, such as paths like "/data/...".
-
-        int compare = String.CompareOrdinal(aPath, bPath);
-        if (compare != 0) return compare;
-
-        return String.CompareOrdinal(aNode.name, bNode.name); //https://learn.microsoft.com/en-us/dotnet/standard/base-types/string-comparison-net-5-plus
-      });
-      allNodes = new List<FSNode>(allDirs.OrderBy(d => d.FullPath(), StringComparer.Ordinal).ToList()); //https://stackoverflow.com/a/67052496/22545576
+      allNodes = new List<FSNode>(allDirs); //.OrderBy(d => d.FullPath(), StringComparer.Ordinal).ToList() //https://stackoverflow.com/a/67052496/22545576
       allNodes.AddRange(allFiles);
 
       SetupRootStructure(FlatPathTable.HasCollision(allNodes));
@@ -315,7 +305,10 @@ namespace LibOrbisPkg.PFS
     /// </summary>
     void addFileInodes()
     {
-      foreach (var file in allFiles)
+      // The path processing here is because the original sorting method places files with fewer folder layers towards the end.
+      // For example, files located in the root directory like "/eboot.bin" will be sorted after all folders, such as paths like "/data/..."
+      //https://learn.microsoft.com/en-us/dotnet/standard/base-types/string-comparison-net-5-plus
+      foreach (var file in allFiles.OrderBy(x => x.FullPath().Replace(x.name, "") + "zzzzzzzzzz/" + x.name, StringComparer.Ordinal))
       {
         var ino = MakeInode(
           Mode: InodeMode.file | Inode.RXOnly,

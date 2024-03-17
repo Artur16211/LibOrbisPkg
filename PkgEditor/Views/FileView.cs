@@ -42,6 +42,8 @@ namespace PkgEditor.Views
             child.name,
             child is PfsDir ? "" : HumanReadableFileSize(child.compressed_size),
             child is PfsDir ? "" : HumanReadableFileSize(child.size),
+            child is PfsDir ? "" : child.ino.ToString(),
+            child is PfsDir ? "" : string.Format("0x{0:X} ( {0} )", child.offset),
           },
           child is PfsDir ? 1 : 0)
           {

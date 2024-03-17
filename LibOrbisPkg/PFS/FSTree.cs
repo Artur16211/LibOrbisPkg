@@ -106,6 +106,18 @@ namespace LibOrbisPkg.PFS
       foreach (var dir in GetAllChildrenDirs())
         foreach (var f in dir.Files)
           ret.Add(f);
+
+      ret = ret.OrderBy(x =>
+      {
+        if (x.FullPath() == "/sce_sys/about/right.sprx") return "0";
+        else if (x.FullPath().StartsWith("/sce_discmap")) return "1";
+        else if (x.FullPath().Replace(x.name, "") == "/") return "2";
+        else if (x.FullPath().StartsWith("/sce_module")) return "3";
+        else if (x.FullPath().StartsWith("/sce_sys")) return "4";
+        var depth = x.FullPath().Split('/')?.Length;
+
+        return string.Format("9_{0:00}", depth);
+      }, StringComparer.Ordinal).ToList();
       return ret;
     }
 
