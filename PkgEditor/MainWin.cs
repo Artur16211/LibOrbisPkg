@@ -122,13 +122,36 @@ namespace PkgEditor
 
     private void closeToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      CurrentView?.Close();
+      var tmpTab = tabs.SelectedTab;
       tabs.TabPages.Remove(tabs.SelectedTab);
+      CurrentView?.Close();
+      RecursiveDispose(tmpTab);
       UpdateSaveButtons();
       if (tabs.TabPages.Count == 0)
       {
         closeToolStripMenuItem.Enabled = false;
       }
+      GC.Collect();
+    }
+
+    /// <summary>
+    /// https://stackoverflow.com/q/2047012
+    /// </summary>
+    public static bool RecursiveDispose(Control ctrl)
+    {
+      try
+      {
+        if (ctrl == null) return false;
+
+        bool isBreak = true;
+        while (isBreak && ctrl?.Controls?.Count > 0)
+          isBreak = RecursiveDispose(ctrl?.Controls?[0]);
+
+        ctrl?.Dispose();
+        ctrl = null;
+        return true;
+      }
+      catch { return false; }
     }
 
     private Views.View CurrentView => tabs.SelectedTab?.Controls[0] as Views.View;

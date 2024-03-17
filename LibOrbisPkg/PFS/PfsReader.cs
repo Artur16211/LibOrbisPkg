@@ -198,7 +198,12 @@ namespace LibOrbisPkg.PFS
     {
       // 100M blocks is enough for a 6TB file.
       const int MAX_BLOCKS = 100_000_000;
-      var ret = new Dir() { name = name, parent = parent };
+      var ret = new Dir() { name = name, parent = parent,
+        offset          = dinodes[dinode].StartBlock * hdr.BlockSize,
+        size            = dinodes[dinode].Size,
+        compressed_size = dinodes[dinode].SizeCompressed,
+        ino             = dinode,
+      };
       var ino = dinodes[dinode];
       var postLoad = new List<Func<Dir>>();
       var blocks = (int)ino.Blocks;
@@ -290,13 +295,13 @@ namespace LibOrbisPkg.PFS
       }
       return new File(reader)
       {
-        name = name,
-        parent = parent,
-        offset = dinodes[dinode].StartBlock * hdr.BlockSize,
-        size = dinodes[dinode].Size,
+        name            = name,
+        parent          = parent,
+        offset          = dinodes[dinode].StartBlock * hdr.BlockSize,
+        size            = dinodes[dinode].Size,
         compressed_size = dinodes[dinode].SizeCompressed,
-        ino = dinode,
-        blocks = blocks,
+        ino             = dinode,
+        blocks          = blocks,
       };
     }
   }

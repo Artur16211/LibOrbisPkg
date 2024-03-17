@@ -28,6 +28,11 @@ namespace PkgEditor.Views
     {
       pkgFile.Dispose();
       va?.Dispose();
+      pkgHeaderTreeView?.Nodes?.Clear();
+      pkgHeaderTabControl.TabPages?.Clear();
+      MainWin.RecursiveDispose(pkgHeaderTreeView);
+      MainWin.RecursiveDispose(pkgHeaderTabControl);
+      MainWin.RecursiveDispose(this);
     }
 
     private Pkg pkg;
@@ -161,8 +166,12 @@ namespace PkgEditor.Views
       else tv.Nodes.Clear();
       AddObjectNodes(obj, tv.Nodes);
     }
+    bool IsNumber(object value) =>
+      value is sbyte || value is byte || value is short || value is ushort
+      || value is int || value is uint || value is long || value is ulong
+      || value is float || value is double || value is decimal;
 
-    string toString(object obj)
+    string ObjToString(object obj)
     {
       switch (obj)
       {
@@ -178,7 +187,7 @@ namespace PkgEditor.Views
           if (result != "0x0") result += string.Format(" ( {0} )", obj);
           return result;
         default:
-          return obj.ToString();
+          return obj?.ToString();
       }
     }
 
@@ -209,6 +218,13 @@ namespace PkgEditor.Views
 
         nodes.Add(str);
       }
+      else if (IsNumber(obj))
+      {
+        string objStr = ObjToString(obj);
+        if (!string.IsNullOrEmpty(descName)) objStr = string.Format("{0} {1}", descName, objStr);
+
+        nodes.Add(objStr);
+      }
       else if(obj is Object[] objArr)
       {
         AddArrayNodes(objArr, string.IsNullOrEmpty(descName) ? "Array" : descName, nodes); //foreach (Object o1 in objArr) nodes.Add(toString(o1));
@@ -220,7 +236,7 @@ namespace PkgEditor.Views
       else if (obj is IDictionary objDict)
       {
         List<object> dictList = new List<object>();
-        foreach (DictionaryEntry o1 in objDict) dictList.Add(string.Format("{0} = {1}", toString(o1.Key), toString(o1.Value)));
+        foreach (DictionaryEntry o1 in objDict) dictList.Add(string.Format("{0} = {1}", ObjToString(o1.Key), ObjToString(o1.Value)));
         AddArrayNodes(dictList.Cast<object>().ToArray(), string.IsNullOrEmpty(descName) ? "Dictionary" : descName, nodes);
       }
       else
@@ -251,7 +267,7 @@ namespace PkgEditor.Views
           {
             if (val != null)
             {
-              nodes.Add(infoName + f.Name + " = " + toString(val));
+              nodes.Add(infoName + f.Name + " = " + ObjToString(val));
             }
           }
           else if (f.FieldType.IsArray)
@@ -283,7 +299,7 @@ namespace PkgEditor.Views
       if (eType.IsPrimitive || eType == typeof(string) || eType.IsEnum)
         for (var i = 0; i < arr.Length; i++)
         {
-          var n = new TreeNode($"[{i:00}] {toString(arr.GetValue(i))}");
+          var n = new TreeNode($"[{i:00}] {ObjToString(arr.GetValue(i))}");
           node.Nodes.Add(n);
         }
       else for (var i = 0; i < arr.Length; i++)
@@ -327,8 +343,6 @@ namespace PkgEditor.Views
         var outerPfs = new PfsReader(va, pkg.Header.pfs_flags, ekpfs, tweak, data);
         var innerPfsView = new PFSCReader(outerPfs.GetFile("pfs_image.dat").GetView());
 
-        ObjectPreview(("PFSC Header ( pfs_image.dat )", (object)innerPfsView.Hdr), pfsHeaderTreeView, true, true);
-
         TreeView innerTreeView = PreviewInnerPfsHeader(innerPfsView);
 
         var inner = new PfsReader(innerPfsView);
@@ -339,8 +353,9 @@ namespace PkgEditor.Views
           outerFlatFile.GetView() is IMemoryAccessor outerFlatAccessor)
         {
           var outFlatPathTable = new FlatPathTable(outerFlatAccessor, outerFlatFile.compressed_size, outerURoot);
-          ObjectPreview(("flat_path_table raw", (object)outFlatPathTable.HashMap), pfsHeaderTreeView, true);
+          ObjectPreview(("flat_path_table raw", (object)outFlatPathTable.HashMap), pfsHeaderTreeView, true, true);
           ObjectPreview(("flat_path_table parse", (object)outFlatPathTable.FlatInfos), pfsHeaderTreeView, true);
+          outerFlatAccessor?.Dispose();
         }
         if (inner.GetSuperRoot() is PfsReader.Dir innerRoot && 
           innerRoot.GetPath("flat_path_table") is PfsReader.File innerFlatFile &&
@@ -350,7 +365,11 @@ namespace PkgEditor.Views
           var innerFlatPathTable = new FlatPathTable(innerFlatAccessor, innerFlatFile.compressed_size, innerURoot);
           ObjectPreview(("flat_path_table raw", (object)innerFlatPathTable.HashMap), innerTreeView, true, true);
           ObjectPreview(("flat_path_table parse", (object)innerFlatPathTable.FlatInfos), innerTreeView, true);
+          innerFlatAccessor?.Dispose();
         }
+
+        ObjectPreview(("pfs_image.dat:PFSC Header", (object)innerPfsView.Hdr), pfsHeaderTreeView, true);
+        ObjectPreview(("pfs_image.dat:PFSC SectorOffsetInfo", (object)innerPfsView.SectorOffsetInfo), pfsHeaderTreeView, true);
 
         var view = new FileView();
         view.AddRoot(outerPfs, "Outer PFS Image");

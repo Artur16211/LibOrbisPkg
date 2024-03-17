@@ -13,10 +13,10 @@ namespace LibOrbisPkg.PFS
   [Flags]
   public enum PfsMode : ushort
   {
-    None = 0,
-    Signed = 0x1,
-    Is64Bit = 0x2,
-    Encrypted = 0x4,
+    None                 = 0,
+    Signed               = 0x1,
+    Is64Bit              = 0x2,
+    Encrypted            = 0x4,
     UnknownFlagAlwaysSet = 0x8,
   }
   /// <summary>
@@ -24,32 +24,32 @@ namespace LibOrbisPkg.PFS
   /// </summary>
   public class PfsHeader
   {
-    public long Version = 1; // 1
-    public long Magic = 20130315; // 20130315 (march 15 2013???)
-    public long Id = 0;
-    public byte Fmode = 0;
-    public byte Clean = 0;
-    public byte ReadOnly = 0;
-    public byte Rsv = 0;
-    public PfsMode Mode = PfsMode.UnknownFlagAlwaysSet;
-    public ushort Unk1 = 0;
+    public long Version   = 1; // 1
+    public long Magic     = 20130315; // 20130315 (march 15 2013???)
+    public long Id        = 0;
+    public byte Fmode     = 0;
+    public byte Clean     = 0;
+    public byte ReadOnly  = 0;
+    public byte Rsv       = 0;
+    public PfsMode Mode   = PfsMode.UnknownFlagAlwaysSet;
+    public ushort Unk1    = 0;
     public uint BlockSize = 0x10000;
-    public uint NBackup = 0;
+    public uint NBackup   = 0;
     /// <summary>
     /// This is always 1 for some reason.
     /// </summary>
-    public long NBlock = 1;
-    public long DinodeCount = 0;
-    public long Ndblock = 0;
-    public long DinodeBlockCount = 0;
+    public long NBlock             = 1;
+    public long DinodeCount        = 0;
+    public long Ndblock            = 0;
+    public long DinodeBlockCount   = 0;
     public DinodeS64 InodeBlockSig = new DinodeS64()
     {
-      Mode = 0,
-      Nlink = 1,
-      Flags = InodeFlags.@readonly,
-      Size = 0x10000,
+      Mode           = 0,
+      Nlink          = 1,
+      Flags          = InodeFlags.@readonly,
+      Size           = 0x10000,
       SizeCompressed = 0x10000,
-      Blocks = 1,
+      Blocks         = 1,
     };
     public int UnknownIndex = 0;
     public byte[] Seed;
@@ -92,20 +92,20 @@ namespace LibOrbisPkg.PFS
       var start = s.Position;
       var hdr = new PfsHeader
       {
-        Version = s.ReadInt64LE(),
-        Magic = s.ReadInt64LE(),
-        Id = s.ReadInt64LE(),
-        Fmode = s.ReadUInt8(),
-        Clean = s.ReadUInt8(),
-        ReadOnly = s.ReadUInt8(),
-        Rsv = s.ReadUInt8(),
-        Mode = (PfsMode)s.ReadUInt16LE(),
-        Unk1 = s.ReadUInt16LE(),
-        BlockSize = s.ReadUInt32LE(),
-        NBackup = s.ReadUInt32LE(),
-        NBlock = s.ReadInt64LE(),
-        DinodeCount = s.ReadInt64LE(),
-        Ndblock = s.ReadInt64LE(),
+        Version          = s.ReadInt64LE(),
+        Magic            = s.ReadInt64LE(),
+        Id               = s.ReadInt64LE(),
+        Fmode            = s.ReadUInt8(),
+        Clean            = s.ReadUInt8(),
+        ReadOnly         = s.ReadUInt8(),
+        Rsv              = s.ReadUInt8(),
+        Mode             = (PfsMode)s.ReadUInt16LE(),
+        Unk1             = s.ReadUInt16LE(),
+        BlockSize        = s.ReadUInt32LE(),
+        NBackup          = s.ReadUInt32LE(),
+        NBlock           = s.ReadInt64LE(),
+        DinodeCount      = s.ReadInt64LE(),
+        Ndblock          = s.ReadInt64LE(),
         DinodeBlockCount = s.ReadInt64LE(),
       };
       s.Position += 8; // skip a 64-bit zero

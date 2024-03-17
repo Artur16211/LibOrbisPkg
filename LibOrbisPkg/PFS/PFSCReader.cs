@@ -13,9 +13,19 @@ namespace LibOrbisPkg.PFS
   /// </summary>
   public class PFSCReader : IMemoryReader
   {
+    /// <summary>
+    /// Ansi:PFSC
+    /// </summary>
     public const int Magic = 0x43534650;
     public PFSCHdr Hdr { get; private set; }
+    public string[] SectorOffsetInfo { get; private set; }
+
     private IMemoryAccessor _accessor;
+    /// <summary>
+    /// The SectorMap stores the offset of each sector starting from the BlockOffsets position in the PFSC Header (usually at 0x400).
+    /// The initial offset is determined by the DataStart value in the PFSC Header (which is greater than or equal to 0x10000).
+    /// The size of each sector is calculated by subtracting the current offset from the offset of the next sector.
+    /// </summary>
     private long[] sectorMap;
 
     /// <summary>
@@ -39,6 +49,21 @@ namespace LibOrbisPkg.PFS
       var num_blocks = (int)(hdr.DataLength / hdr.BlockSz2);
       sectorMap = new long[num_blocks + 1];
       _accessor.ReadArray(hdr.BlockOffsets, sectorMap, 0, num_blocks + 1);
+
+      long tmpOffset = 0;
+      SectorOffsetInfo = new string[(sectorMap.Length / 10) + (sectorMap.Length % 10 == 0 ? 0 : 1)];
+      for (int idx = 0; idx < sectorMap.Length; idx++)
+      {
+        int index = idx / 10;
+        var sectorOffset = sectorMap[idx];
+
+        if (idx % 10 == 0)
+          SectorOffsetInfo[index] = string.Format("[{0:0000}] 0x{1:X8} ( {1} ) => 0x{2:X} ( {2} )", idx, sectorOffset, tmpOffset > 0 ? sectorOffset - tmpOffset : 0);
+        else
+          SectorOffsetInfo[index] += string.Format(", 0x{0:X} ( {0} )", sectorOffset - tmpOffset);
+
+        tmpOffset = sectorOffset;
+      }
       Hdr = hdr;
     }
 
@@ -101,6 +126,16 @@ namespace LibOrbisPkg.PFS
       }
     }
     
+    /// <summary>
+    /// The parameters for the Write Action are as follows:
+    /// sectorBuffer    : Sector data read from the current src position
+    /// offsetIntoSector: Convert the src position to the current relative offset within the Sector Block.
+    /// bufferedRead    : The remaining size that can be read from the current Sector Block, or the specified count value; only the smaller of the two will be read.
+    /// </summary>
+    /// <param name="src"></param>
+    /// <param name="count"></param>
+    /// <param name="Write">The Write Action will start reading values from the offsetIntoSector position of sectorBuffer, with a quantity of bufferedRead, and copy them to the buffer array.</param>
+    /// <exception cref="ArgumentException"></exception>
     private void Read(long src, long count, Action<byte[],int,int> Write)
     {
       if (src + count > Hdr.DataLength)
@@ -146,6 +181,10 @@ namespace LibOrbisPkg.PFS
     /// <param name="count">Number of bytes to read</param>
     public void Read(long src, byte[] buffer, int offset, int count)
     {
+      // The Write Action will start reading values from the offsetIntoSector position of sectorBuffer, with a quantity of bufferedRead, and copy them to the buffer array.
+      // sectorBuffer: Sector data read from the current src position
+      // offsetIntoSector: Convert the src position to the current relative offset within the Sector Block.
+      // bufferedRead: The remaining size that can be read from the current Sector Block, or the specified count value; only the smaller of the two will be read.
       Read(src, count, (sectorBuffer, offsetIntoSector, bufferedRead) =>
       {
         Buffer.BlockCopy(sectorBuffer, offsetIntoSector, buffer, offset, bufferedRead);
@@ -161,8 +200,14 @@ namespace LibOrbisPkg.PFS
     [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x30)]
     public struct PFSCHdr
     {
+      /// <summary>
+      /// Ansi:PFSC／BigEndian:0x50465343／LittleEndian:0x43534650
+      /// </summary>
       public int Magic;
       public int Unk4;
+      /// <summary>
+      /// The Unk8 in PFSC's Header is 6 when the PKG is uncompressed, and 2 if it is compressed.
+      /// </summary>
       public int Unk8;
       public int BlockSz;
       public long BlockSz2;

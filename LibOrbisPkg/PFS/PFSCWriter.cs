@@ -35,17 +35,17 @@ namespace LibOrbisPkg.PFS
     public void WritePFSCHeader(Stream s)
     {
       var start = s.Position;
-      s.WriteInt32BE(0x50465343); // 'PFSC'
-      s.WriteLE(0);
-      s.WriteLE(6);
-      s.WriteLE(BlockSize);
-      s.WriteLE((long)BlockSize);
-      s.WriteLE(0x400L);
-      s.WriteLE(HeaderSize);
-      s.WriteLE(num_blocks * BlockSize);
+      s.WriteInt32BE(0x50465343);        // Magic:PFSC
+      s.WriteLE(0);                      // Unk4
+      s.WriteLE(6);                      // Unk8
+      s.WriteLE(BlockSize);              // BlockSz
+      s.WriteLE((long)BlockSize);        // BlockSz2
+      s.WriteLE(0x400L);                 // BlockOffsets
+      s.WriteLE(HeaderSize);             // DataStart
+      s.WriteLE(num_blocks * BlockSize); // DataLength
       s.Position = start + 0x400L;
       for(long i = 0; i <= num_blocks; i++)
-      {
+      {                                  // SectorMap
         s.WriteLE(HeaderSize + (i * BlockSize));
       }
       s.Position = start + HeaderSize;
