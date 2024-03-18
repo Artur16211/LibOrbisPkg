@@ -253,68 +253,68 @@ namespace LibOrbisPkg.PKG
       var volType = project.VolumeType;
       pkg.Header = new Header
       {
-        CNTMagic = "\u007fCNT",
-        flags = PKGFlags.Unknown,
-        unk_0x08 = 0,
-        unk_0x0C = 0xF,
-        entry_count = 6,
-        sc_entry_count = 6,
-        entry_count_2 = 6,
+        CNTMagic           = "\u007fCNT",
+        flags              = PKGFlags.Unknown,
+        unk_0x08           = 0,
+        unk_0x0C           = 0xF,
+        entry_count        = 6,
+        sc_entry_count     = 6,
+        entry_count_2      = 6,
         entry_table_offset = 0x2A80,
         main_ent_data_size = 0xD00,
-        body_offset = 0x2000,
-        body_size = 0x7E000,
-        content_id = project.ContentId,
-        drm_type = DrmType.PS4,
-        content_type = VolTypeToContentType(volType),
-        content_flags = ContentFlags.Unk_x8000000 | VolTypeToContentFlags(volType),
+        body_offset        = 0x2000,
+        body_size          = 0x7E000,
+        content_id         = project.ContentId,
+        drm_type           = DrmType.PS4,
+        content_type       = VolTypeToContentType(volType),
+        content_flags      = ContentFlags.Unk_x8000000 | VolTypeToContentFlags(volType),
         // TODO
-        promote_size = 0,
-        version_date = 0x20161020,
-        version_hash = 0x1738551,
-        unk_0x88 = 0,
-        unk_0x8C = 0,
-        unk_0x90 = 0,
-        unk_0x94 = 0,
-        iro_tag = IROTag.None,
-        ekc_version = 1,
-        sc_entries1_hash = new byte[32],
-        sc_entries2_hash = new byte[32],
+        promote_size      = 0,
+        version_date      = 0x20161020,
+        version_hash      = 0x1738551,
+        unk_0x88          = 0,
+        unk_0x8C          = 0,
+        unk_0x90          = 0,
+        unk_0x94          = 0,
+        iro_tag           = IROTag.None,
+        ekc_version       = 1,
+        sc_entries1_hash  = new byte[32],
+        sc_entries2_hash  = new byte[32],
         digest_table_hash = new byte[32],
-        body_digest = new byte[32],
-        unk_0x400 = 1
+        body_digest       = new byte[32],
+        unk_0x400         = 1
       };
       if (pkg.Header.content_type != ContentType.AL)
       {
-        pkg.Header.pfs_image_count = 1;
-        pkg.Header.pfs_flags = 0x80000000000003CC; //Generate using the new method when pfs_flags is 0xA0000000000003CC
-        pkg.Header.pfs_image_offset = 0x80000;
-        pkg.Header.pfs_image_size = (ulong)pfsSize;
-        pkg.Header.mount_image_offset = 0;
-        pkg.Header.mount_image_size = 0;
-        pkg.Header.package_size = (ulong)(0x80000 + pfsSize);
-        pkg.Header.pfs_signed_size = 0x10000;
-        pkg.Header.pfs_cache_size = 0xD0000;
-        pkg.Header.pfs_image_digest = new byte[32];
-        pkg.Header.pfs_signed_digest = new byte[32];
+        pkg.Header.pfs_image_count      = 1;
+        pkg.Header.pfs_flags            = 0x80000000000003CC; //Generate using the new method when pfs_flags is 0xA0000000000003CC
+        pkg.Header.pfs_image_offset     = 0x80000;
+        pkg.Header.pfs_image_size       = (ulong)pfsSize;
+        pkg.Header.mount_image_offset   = 0;
+        pkg.Header.mount_image_size     = 0;
+        pkg.Header.package_size         = (ulong)(0x80000 + pfsSize);
+        pkg.Header.pfs_signed_size      = 0x10000;
+        pkg.Header.pfs_cache_size       = 0xD0000;
+        pkg.Header.pfs_image_digest     = new byte[32];
+        pkg.Header.pfs_signed_digest    = new byte[32];
         pkg.Header.pfs_split_size_nth_0 = 0;
         pkg.Header.pfs_split_size_nth_1 = 0;
       }
-      pkg.HeaderDigest = new byte[32];
+      pkg.HeaderDigest    = new byte[32];
       pkg.HeaderSignature = new byte[0x100];
-      pkg.EntryKeys = new KeysEntry(
+      pkg.EntryKeys       = new KeysEntry(
         project.ContentId,
         project.Passcode);
-      pkg.ImageKey = new GenericEntry(EntryId.IMAGE_KEY)
+      pkg.ImageKey        = new GenericEntry(EntryId.IMAGE_KEY)
       {
         FileData = Crypto.RSA2048EncryptKey(RSAKeyset.FakeKeyset.Modulus, EKPFS)
       };
       pkg.GeneralDigests = new GeneralDigestsEntry();
-      pkg.Metas = new MetasEntry();
-      pkg.Digests = new GenericEntry(EntryId.DIGESTS);
-      pkg.EntryNames = new NameTableEntry();
-      pkg.LicenseDat = GenLicense();
-      pkg.LicenseInfo = new GenericEntry(EntryId.LICENSE_INFO) { FileData = GenLicenseInfo() };
+      pkg.Metas          = new MetasEntry();
+      pkg.Digests        = new GenericEntry(EntryId.DIGESTS);
+      pkg.EntryNames     = new NameTableEntry();
+      pkg.LicenseDat     = GenLicense();
+      pkg.LicenseInfo    = new GenericEntry(EntryId.LICENSE_INFO) { FileData = GenLicenseInfo() };
       var paramSfoFile = project.RootDir.GetFile("sce_sys/param.sfo");
       if (paramSfoFile == null)
       {

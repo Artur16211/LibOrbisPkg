@@ -26,13 +26,12 @@ namespace PkgEditor.Views
 
     public override void Close()
     {
-      pkgFile.Dispose();
       va?.Dispose();
+      pkgFile?.Dispose();
       pkgHeaderTreeView?.Nodes?.Clear();
-      pkgHeaderTabControl.TabPages?.Clear();
+      pkgHeaderTabControl?.TabPages?.Clear();
       MainWin.RecursiveDispose(pkgHeaderTreeView);
       MainWin.RecursiveDispose(pkgHeaderTabControl);
-      MainWin.RecursiveDispose(this);
     }
 
     private Pkg pkg;
@@ -366,6 +365,7 @@ namespace PkgEditor.Views
           ObjectPreview(("flat_path_table raw", (object)innerFlatPathTable.HashMap), innerTreeView, true, true);
           ObjectPreview(("flat_path_table parse", (object)innerFlatPathTable.FlatInfos), innerTreeView, true);
           innerFlatAccessor?.Dispose();
+          innerPfsView.ParseSectorOffsetInfo(innerRoot.parent != null ? innerRoot.parent : innerRoot);
         }
 
         ObjectPreview(("pfs_image.dat:PFSC Header", (object)innerPfsView.Hdr), pfsHeaderTreeView, true);

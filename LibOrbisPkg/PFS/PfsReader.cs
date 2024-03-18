@@ -49,6 +49,7 @@ namespace LibOrbisPkg.PFS
         }
         return n;
       }
+
       public IEnumerable<File> GetAllFiles()
       {
         foreach(var n in children)
@@ -59,7 +60,22 @@ namespace LibOrbisPkg.PFS
               yield return x;
         }
       }
+
+      public IEnumerable<Node> GetAllNodes()
+      {
+        foreach (var n in children)
+        {
+          if (n is File f) yield return f;
+          if (n is Dir d)
+          {
+            foreach (var x in d.GetAllNodes())
+              yield return x;
+            yield return d;
+          }
+        }
+      }
     }
+
     /// <summary>
     /// Represents a file in a PFS image.
     /// </summary>

@@ -122,10 +122,10 @@ namespace PkgEditor
 
     private void closeToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      var tmpTab = tabs.SelectedTab;
+      var tmpView = CurrentView;
       tabs.TabPages.Remove(tabs.SelectedTab);
-      CurrentView?.Close();
-      RecursiveDispose(tmpTab);
+      tmpView?.Close();
+      RecursiveDispose(tmpView);
       UpdateSaveButtons();
       if (tabs.TabPages.Count == 0)
       {

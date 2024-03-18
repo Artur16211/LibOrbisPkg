@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 using System.IO.MemoryMappedFiles;
 using System.IO;
 using System.IO.Compression;
+using System.Collections.Generic;
+using System.Linq;
 using LibOrbisPkg.Util;
 
 namespace LibOrbisPkg.PFS
@@ -65,6 +67,50 @@ namespace LibOrbisPkg.PFS
         tmpOffset = sectorOffset;
       }
       Hdr = hdr;
+    }
+
+    /// <summary>
+    /// The ParseSectorOffsetInfo method requires the inner PFS SuperRoot as its input parameter.
+    /// </summary>
+    /// <param name="root">inner PFS SuperRoot Dir</param>
+    public void ParseSectorOffsetInfo(PfsReader.Dir root)
+    {
+      if (root == null) return;
+
+      var sectorStart     = (int)(root.offset / Hdr.BlockSz);
+      var sectorEnd       = (int)((root.offset + root.size) / Hdr.BlockSz);
+      var sectorOffset    = sectorMap[sectorStart];
+      var sectorOffsetEnd = sectorMap[sectorEnd];
+
+      List<string> sectorInfo = new List<string>
+      {
+        string.Format("{0:000000}-______ => 0x{1:X8} ( {1:0000000000} ) ~ 0x________ ( __________ ) {2}",
+        0, sectorMap[0], "Inner PFS Header"),
+        string.Format("{0:000000}-{1:000000} => 0x{2:X8} ( {2:0000000000} ) ~ 0x{3:X8} ( {3:0000000000} ) {4}",
+        1, sectorStart - 1, sectorMap[1], sectorMap[sectorStart - 1], "Inner PFS Inodes"), //sectorEnd = hdr.DinodeBlockCount * hdr.BlockSize
+        string.Format("{0:000000}-{1:000000} => 0x{2:X8} ( {2:0000000000} ) ~ 0x{3:X8} ( {3:0000000000} ) Ino:{4:0000} Dir:{5}",
+        sectorStart, sectorEnd, sectorOffset, sectorOffsetEnd, root.ino, root.FullName != "" ? root.FullName : "super_root")
+      };
+
+      foreach (var node in root.GetAllNodes())
+      {
+        sectorStart     = (int)(node.offset / Hdr.BlockSz);
+        sectorEnd = (int)((node.offset + node.size) / Hdr.BlockSz);
+        sectorOffset = sectorMap[sectorStart];
+        if (sectorStart == sectorEnd || (node is PfsReader.Dir && sectorEnd - sectorStart == 1))
+        {
+          sectorInfo.Add(string.Format("{0:000000}-______ => 0x{1:X8} ( {1:0000000000} ) ~ 0x________ ( __________ ) Ino:{2:0000} {3}:{4}",
+            sectorStart, sectorOffset, node.ino, node is PfsReader.Dir ? "Dir" : "File", node.FullName));
+        }
+        else
+        {
+          sectorOffsetEnd = sectorMap[sectorEnd];
+          sectorInfo.Add(string.Format("{0:000000}-{1:000000} => 0x{2:X8} ( {2:0000000000} ) ~ 0x{3:X8} ( {3:0000000000} ) Ino:{4:0000} {5}:{6}",
+            sectorStart, sectorEnd, sectorOffset, sectorOffsetEnd, node.ino, node is PfsReader.Dir ? "Dir" : "File", node.FullName));
+        }
+      }
+
+      SectorOffsetInfo = sectorInfo.OrderBy(x => x).ToArray();
     }
 
     /// <summary>
