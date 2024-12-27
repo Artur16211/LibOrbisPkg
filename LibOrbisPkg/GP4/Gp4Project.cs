@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
 namespace LibOrbisPkg.GP4
@@ -53,7 +54,12 @@ namespace LibOrbisPkg.GP4
       // Fixup dir tree. For convenience we make our directory tree "doubly linked" in memory
       void setParent(List<Dir> dirs, Dir parent)
       {
-        foreach(var dir in dirs)
+        if (parent?.TargetName == "sce_sys" && !dirs.Any(dir => dir.TargetName == "about"))
+        {
+          dirs.Insert(0, new Dir {Parent = parent, TargetName = "about"});
+        }
+
+        foreach (var dir in dirs)
         {
           dir.Parent = parent;
           setParent(dir.Children, dir);
@@ -62,16 +68,36 @@ namespace LibOrbisPkg.GP4
       setParent(proj.RootDir, null);
 
       // We want each file entry to have an explicit path to simplify later code.
-      foreach(var file in proj.files.Items)
+      foreach (var file in proj.files.Items)
       {
         if(file.OrigPath == null)
         {
           file.OrigPath = file.TargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
         }
       }
+      // [Experimental Modification]
+      // Since the original orbis-pub-gen program automatically generates the right.sprx and sce_discmap.plt files during execution,
+      // the file list in the Gp4Project of the LibOrbisPkg program has been modified to automatically include these two files when building the package.
+      // However, LibOrbisPkg currently cannot generate these two files, so they need to be manually placed in the following paths:
+      // "Image0\sce_sys\about\right.sprx" and "Image0\sce_discmap.plt".
+      if (!proj.files.Items.Any(file => file.FileName == "right.sprx"))
+        proj.files.Items.Add(new Gp4File("sce_sys/about/right.sprx", @"Image0\sce_sys\about\right.sprx"));
+
+      if (!proj.files.Items.Any(file => file.FileName == "sce_discmap.plt"))
+        proj.files.Items.Add(new Gp4File("sce_discmap.plt", @"Image0\sce_discmap.plt"));
+
+      // [Experimental Modification]
+      // This modification prevents the error "Playgo Chunk hash file was not allocated enough space":
+      // Since the original orbis-pub-gen program automatically generates .dds files from .png files during execution,
+      // the file list in the Gp4Project of the LibOrbisPkg program has been modified to automatically include these files when building the package.
+      // However, LibOrbisPkg currently cannot generate .dds files, so they need to be manually placed in the following path: "Image0\sce_sys\*.dds".
+      Regex sceSysPngReg = new Regex(@"^sce_sys/(icon|pic).*\.png$");
+      var pngFiles = new List<Gp4File>(proj.files.Items.Where(file => sceSysPngReg.IsMatch(file.TargetPath)));
+      foreach (var pngFile in pngFiles)
+        proj.files.Items.Add(new Gp4File(pngFile.TargetPath.Replace(".png", ".dds"), pngFile.OrigPath.Replace(".png", ".dds")));
 
       // An entitlement key is required for AC PKGs. So here we ensure that one exists.
-      if(proj.volume.Package.EntitlementKey == null
+      if (proj.volume.Package.EntitlementKey == null
         && (proj.volume.Type == VolumeType.pkg_ps4_ac_data
         || proj.volume.Type == VolumeType.pkg_ps4_ac_nodata))
       {

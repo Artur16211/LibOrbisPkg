@@ -368,7 +368,9 @@ namespace PkgEditor.Views
           innerPfsView.ParseSectorOffsetInfo(innerRoot.parent != null ? innerRoot.parent : innerRoot);
         }
 
-        ObjectPreview(("pfs_image.dat:PFSC Header", (object)innerPfsView.Hdr), pfsHeaderTreeView, true);
+        ObjectPreview(("pfs_image.dat:PFSC Header", (object)innerPfsView.PfscHdr), pfsHeaderTreeView, true);
+        ObjectPreview(("pfs_image.dat:PFSC NumBlocks", (object)innerPfsView.PfscHdr.NumBlocks), pfsHeaderTreeView, true);
+        ObjectPreview(("pfs_image.dat:PFSC PfscSize", (object)innerPfsView.PfscHdr.PfscSize), pfsHeaderTreeView, true);
         ObjectPreview(("pfs_image.dat:PFSC SectorOffsetInfo", (object)innerPfsView.SectorOffsetInfo), pfsHeaderTreeView, true);
 
         var view = new FileView();

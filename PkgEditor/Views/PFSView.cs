@@ -28,13 +28,13 @@ namespace PkgEditor.Views
         reader = new PfsReader(new PFSCReader(va));
       else
       {
-        PfsHeader header;
+        PfsHeader pfsHdr;
         using (var h = pfsFile.CreateViewStream(0, 0x600, MemoryMappedFileAccess.Read))
         {
-          header = PfsHeader.ReadFromStream(h);
+          pfsHdr = PfsHeader.ReadFromStream(h);
         }
         byte[] tweak = null, data = null;
-        if (header.Mode.HasFlag(PfsMode.Encrypted))
+        if (pfsHdr.Mode.HasFlag(PfsMode.Encrypted))
         {
           var passcode = new PasscodeEntry("Please enter data key", 32);
           passcode.Text = "PFS is encrypted";

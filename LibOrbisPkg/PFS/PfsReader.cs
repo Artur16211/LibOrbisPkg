@@ -118,7 +118,7 @@ namespace LibOrbisPkg.PFS
 
     // Private state for the PfsReader class
     private IMemoryReader reader;
-    private PfsHeader hdr;
+    private PfsHeader pfsHdr;
     private Inode[] dinodes;
     private Dir root;
     private Dir uroot;
@@ -136,31 +136,31 @@ namespace LibOrbisPkg.PFS
 
       using (var ms = new MemoryStream(buf))
       {
-        hdr = PfsHeader.ReadFromStream(ms);
+        pfsHdr = PfsHeader.ReadFromStream(ms);
       }
       int dinodeSize;
       Func<Stream, Inode> dinodeReader;
-      if (hdr.Mode.HasFlag(PfsMode.Signed))
+      if (pfsHdr.Mode.HasFlag(PfsMode.Signed))
       {
-        dinodes = new DinodeS32[hdr.DinodeCount];
+        dinodes = new DinodeS32[pfsHdr.DinodeCount];
         dinodeReader = DinodeS32.ReadFromStream;
         dinodeSize = 0x2C8;
       }
       else
       {
-        dinodes = new DinodeD32[hdr.DinodeCount];
+        dinodes = new DinodeD32[pfsHdr.DinodeCount];
         dinodeReader = DinodeD32.ReadFromStream;
         dinodeSize = 0xA8;
       }
-      if (hdr.Mode.HasFlag(PfsMode.Encrypted))
+      if (pfsHdr.Mode.HasFlag(PfsMode.Encrypted))
       {
         const int XtsSectorSize = 0x1000;
-        uint XtsStartSector = hdr.BlockSize / XtsSectorSize;
+        uint XtsStartSector = pfsHdr.BlockSize / XtsSectorSize;
         if (ekpfs == null && (tweak == null || data == null))
           throw new ArgumentException("PFS image is encrypted but no decryption key was provided");
         if (ekpfs != null)
         {
-          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(ekpfs, hdr.Seed, (pfs_flags & 0x2000000000000000UL) != 0);
+          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(ekpfs, pfsHdr.Seed, (pfs_flags & 0x2000000000000000UL) != 0);
           reader = new XtsDecryptReader(reader, dataKey, tweakKey, XtsStartSector, XtsSectorSize);
         }
         else
@@ -170,15 +170,15 @@ namespace LibOrbisPkg.PFS
       }
       var total = 0;
 
-      var maxPerSector = hdr.BlockSize / dinodeSize;
-      sectorBuf = new byte[hdr.BlockSize];
+      var maxPerSector = pfsHdr.BlockSize / dinodeSize;
+      sectorBuf = new byte[pfsHdr.BlockSize];
       sectorStream = new MemoryStream(sectorBuf);
-      for (var i = 0; i < hdr.DinodeBlockCount; i++)
+      for (var i = 0; i < pfsHdr.DinodeBlockCount; i++)
       {
-        var position = hdr.BlockSize + hdr.BlockSize * i;
+        var position = pfsHdr.BlockSize + pfsHdr.BlockSize * i;
         reader.Read(position, sectorBuf, 0, sectorBuf.Length);
         sectorStream.Position = 0;
-        for (var j = 0; j < maxPerSector && total < hdr.DinodeCount; j++)
+        for (var j = 0; j < maxPerSector && total < pfsHdr.DinodeCount; j++)
           dinodes[total++] = dinodeReader(sectorStream);
       }
       root = LoadDir(0, null, "");
@@ -188,7 +188,7 @@ namespace LibOrbisPkg.PFS
       uroot.name = "uroot";
     }
 
-    public PfsHeader Header => hdr;
+    public PfsHeader PfsHdr => pfsHdr;
 
     public File GetFile(string fullPath)
     {
@@ -215,7 +215,7 @@ namespace LibOrbisPkg.PFS
       // 100M blocks is enough for a 6TB file.
       const int MAX_BLOCKS = 100_000_000;
       var ret = new Dir() { name = name, parent = parent,
-        offset          = dinodes[dinode].StartBlock * hdr.BlockSize,
+        offset          = dinodes[dinode].StartBlock * pfsHdr.BlockSize,
         size            = dinodes[dinode].Size,
         compressed_size = dinodes[dinode].SizeCompressed,
         ino             = dinode,
@@ -229,10 +229,10 @@ namespace LibOrbisPkg.PFS
       }
       foreach (var x in Enumerable.Range(ino.StartBlock, blocks))
       {
-        var position = hdr.BlockSize * x;
+        var position = pfsHdr.BlockSize * x;
         reader.Read(position, sectorBuf, 0, sectorBuf.Length);
         sectorStream.Position = 0;
-        while (position < hdr.BlockSize * (x + 1))
+        while (position < pfsHdr.BlockSize * (x + 1))
         {
           var dirent = PfsDirent.ReadFromStream(sectorStream);
           if (dirent.EntSize == 0) break;
@@ -266,13 +266,13 @@ namespace LibOrbisPkg.PFS
       int[] blocks = null;
       if(dinodes[dinode].Blocks > 1 && dinodes[dinode].DirectBlocks[1] != -1)
       {
-        if (!hdr.Mode.HasFlag(PfsMode.Signed))
+        if (!pfsHdr.Mode.HasFlag(PfsMode.Signed))
         {
           throw new Exception("Unsigned PFS images probably shouldn't have noncontiguous blocks");
         }
         blocks = new int[dinodes[dinode].Blocks];
         var remainingBlocks = (long)dinodes[dinode].Blocks;
-        var sigsPerBlock = hdr.BlockSize / 36;
+        var sigsPerBlock = pfsHdr.BlockSize / 36;
         for (int i = 0; i < 12 && i < remainingBlocks; i++)
         {
           blocks[i] = dinodes[dinode].DirectBlocks[i];
@@ -283,16 +283,16 @@ namespace LibOrbisPkg.PFS
         long blockIndexOffset = 12;
         for (int i = 0; i < remainingBlocks && i < sigsPerBlock; i++)
         {
-          bufferedReader.Read(dinodes[dinode].IndirectBlocks[0] * hdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
+          bufferedReader.Read(dinodes[dinode].IndirectBlocks[0] * pfsHdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
         }
         remainingBlocks -= sigsPerBlock;
         blockIndexOffset += sigsPerBlock;
         for (int j = 0; j * sigsPerBlock < remainingBlocks; j++)
         {
-          bufferedReader.Read(dinodes[dinode].IndirectBlocks[1] * hdr.BlockSize + (j * 36) + 32, out int indirectBlockOffset);
+          bufferedReader.Read(dinodes[dinode].IndirectBlocks[1] * pfsHdr.BlockSize + (j * 36) + 32, out int indirectBlockOffset);
           for (int i = 0; i < sigsPerBlock && i + (j * sigsPerBlock) < remainingBlocks; i++)
           {
-            bufferedReader.Read(indirectBlockOffset * hdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
+            bufferedReader.Read(indirectBlockOffset * pfsHdr.BlockSize + (i * 36) + 32, out blocks[i + blockIndexOffset]);
           }
           blockIndexOffset += sigsPerBlock;
         }
@@ -313,7 +313,7 @@ namespace LibOrbisPkg.PFS
       {
         name            = name,
         parent          = parent,
-        offset          = dinodes[dinode].StartBlock * hdr.BlockSize,
+        offset          = dinodes[dinode].StartBlock * pfsHdr.BlockSize,
         size            = dinodes[dinode].Size,
         compressed_size = dinodes[dinode].SizeCompressed,
         ino             = dinode,

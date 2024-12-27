@@ -553,6 +553,7 @@ namespace PkgTool
       // Console.WriteLine("Listing in parallel...");
       Parallel.ForEach(
         inner.GetAllFiles(),
+        new ParallelOptions { MaxDegreeOfParallelism = 10 },
         (f, _) => {
           Console.WriteLine(f.FullName);
         });
@@ -563,6 +564,7 @@ namespace PkgTool
       Console.WriteLine("Extracting in parallel...");
       Parallel.ForEach(
         inner.GetAllFiles(),
+        new ParallelOptions { MaxDegreeOfParallelism = 10 },
         () => new byte[0x10000],
         (f, _, buf) =>
         {

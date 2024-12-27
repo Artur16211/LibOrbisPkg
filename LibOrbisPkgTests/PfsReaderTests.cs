@@ -23,10 +23,10 @@ namespace LibOrbisPkgTests
     [TestMethod]
     public void TestMissingKeyException()
     {
-      var pfs = new PfsHeader() { Seed = new byte[32], Mode = PfsMode.Encrypted | PfsMode.Signed | PfsMode.UnknownFlagAlwaysSet };
+      var pfsHdr = new PfsHeader() { Seed = new byte[32], Mode = PfsMode.Encrypted | PfsMode.Signed | PfsMode.UnknownFlagAlwaysSet };
       using (var s = new MemoryStream())
       {
-        pfs.WriteToStream(s);
+        pfsHdr.WriteToStream(s);
         s.Position = 0;
         var reader = new TestHelper.ArrayMemoryReader(s.GetBuffer());
         Assert.ThrowsException<ArgumentException>(() => { new PfsReader(reader, 0, null, null, null); });

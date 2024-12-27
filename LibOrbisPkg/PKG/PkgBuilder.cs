@@ -216,6 +216,7 @@ namespace LibOrbisPkg.PKG
       {
         Parallel.ForEach(
           Enumerable.Range(chunkOffset, totalChunks),
+          new ParallelOptions { MaxDegreeOfParallelism = 10 },
           () => Tuple.Create(SHA256.Create(), new byte[CHUNK_SIZE]),
           (chunk, _, local) =>
           {
@@ -468,10 +469,16 @@ namespace LibOrbisPkg.PKG
       {
         // Important sizes for PlayGo ChunkDat
         pkg.ChunkSha.FileData = new byte[4 * (pkg.Header.package_size / 0x10000)];
+        // One of the known causes of the error "Playgo Chunk hash file was not allocated enough space" has been identified:
+        // The length of ChunkSha.FileData is calculated based on pkg.Header.package_size,
+        // which includes files not listed in the gp4, such as "Image0\sce_sys*.dds".
+        // On the other hand, ChunkSha.meta is determined based on the file list in the gp4.
+        // This discrepancy in length is one of the reasons for the error.
+        //
+        // Another known cause is the use of Align to calculate the DataOffset of MetaEntry and the body_size of Header.
+        // If the Align feature is not used, the lengths would match, but this is clearly not the root cause of the mismatch.
         if (pkg.ChunkSha.FileData.Length > pkg.ChunkSha.meta.DataSize)
-        { // If FileData and meta.DataSize lengths not matching in PkgBuilder, one known cause of mismatches in lengths
-          // is the use of Align when calculating the DataOffset of MetaEntry and body_size of Header.
-          // If the Align feature is not used, the sizes would match, but this may not necessarily be the root cause of the mismatch.
+        {
           string errorMsg = string.Format("Playgo Chunk hash file was not allocated enough space. " +
             "Report this as a bug; FileData:{0:X} ( {0} ) > meta.DataSize:{1:X} ( {1} )", 
             pkg.ChunkSha.FileData.Length, pkg.ChunkSha.meta.DataSize);

@@ -609,7 +609,7 @@
             this.ExportGP4Project.Name = "ExportGP4Project";
             this.ExportGP4Project.Size = new System.Drawing.Size(133, 21);
             this.ExportGP4Project.TabIndex = 17;
-            this.ExportGP4Project.Text = "Export to GP4 Project1";
+            this.ExportGP4Project.Text = "Export to GP4 Project";
             this.ExportGP4Project.UseVisualStyleBackColor = true;
             this.ExportGP4Project.Click += new System.EventHandler(this.ExportGP4Project_Click);
             // 

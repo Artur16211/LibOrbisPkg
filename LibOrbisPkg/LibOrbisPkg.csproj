@@ -52,7 +52,6 @@
     <Compile Include="GP4\Gp4Project.cs" />
     <Compile Include="GP4\Gp4Validator.cs" />
     <Compile Include="PFS\PFSCReader.cs" />
-    <Compile Include="PFS\PFSCWriter.cs" />
     <Compile Include="PFS\PfsReader.cs" />
     <Compile Include="PFS\XtsDecryptReader.cs" />
     <Compile Include="PKG\Entry.cs" />

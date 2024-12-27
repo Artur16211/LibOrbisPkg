@@ -45,7 +45,7 @@ namespace PkgEditor.Views
     private MemoryMappedFile pfs;
     private IMemoryAccessor accessor;
     private IMemoryReader xtsReader;
-    private PfsHeader header;
+    private PfsHeader pfsHdr;
     void ClosePfs()
     {
       accessor?.Dispose();
@@ -60,9 +60,9 @@ namespace PkgEditor.Views
       accessor = new MemoryMappedViewAccessor_(pfs.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read), true);
       using (var s = pfs.CreateViewStream(0, 0x5A0, MemoryMappedFileAccess.Read))
       {
-        header = PfsHeader.ReadFromStream(s);
-        objectView1.ObjectPreview(header);
-        pfsSeed.Text = header.Seed.ToHexCompact();
+        pfsHdr = PfsHeader.ReadFromStream(s);
+        objectView1.ObjectPreview(pfsHdr);
+        pfsSeed.Text = pfsHdr.Seed.ToHexCompact();
       }
       xtsReader = accessor;
       UpdateHexView();
@@ -71,10 +71,10 @@ namespace PkgEditor.Views
     void UpdateHexView()
     {
       if (xtsReader == null) return;
-      var buf = new byte[header.BlockSize];
-      xtsReader.Read(header.BlockSize, buf, 0, buf.Length);
+      var buf = new byte[pfsHdr.BlockSize];
+      xtsReader.Read(pfsHdr.BlockSize, buf, 0, buf.Length);
       var sb = new StringBuilder();
-      for (int i = 0; i < header.BlockSize; i++)
+      for (int i = 0; i < pfsHdr.BlockSize; i++)
       {
         if (i != 0 && i % 16 == 0)
         {

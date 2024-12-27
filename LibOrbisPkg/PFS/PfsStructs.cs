@@ -42,6 +42,7 @@ namespace LibOrbisPkg.PFS
     public long DinodeCount        = 0;
     public long Ndblock            = 0;
     public long DinodeBlockCount   = 0;
+    public long Skip64bitZero      = 0;
     public DinodeS64 InodeBlockSig = new DinodeS64()
     {
       Mode           = 0,
@@ -51,12 +52,13 @@ namespace LibOrbisPkg.PFS
       SizeCompressed = 0x10000,
       Blocks         = 1,
     };
-    public int UnknownIndex = 0;
-    public byte[] Seed;
+    public long Unk_0x360   = 0;
+    public int Unk_Index    = 0;
+    public int UnkSeedIndex = 0;
+    public byte[] Seed; // size: 16
 
     public void WriteToStream(Stream s)
     {
-      var start = s.Position;
       s.WriteInt64LE(Version);
       s.WriteInt64LE(Magic);
       s.WriteInt64LE(Id);
@@ -72,25 +74,17 @@ namespace LibOrbisPkg.PFS
       s.WriteInt64LE(DinodeCount);
       s.WriteInt64LE(Ndblock);
       s.WriteInt64LE(DinodeBlockCount);
-      s.WriteInt64LE(0);
+      s.WriteInt64LE(Skip64bitZero);
       InodeBlockSig.WriteToStream(s);
-      if (Seed != null)
-      {
-        s.Position = start + 0x36C;
-        s.WriteInt32LE(UnknownIndex);
-        s.Write(Seed, 0, Seed.Length);
-      }
-      else
-      {
-        s.Position = start + 0x368;
-        s.WriteInt32LE(1);
-      }
+      s.WriteInt64LE(Unk_0x360);
+      if (Seed != null) s.WriteInt32LE(UnkSeedIndex);
+      s.WriteInt32LE(Unk_Index);
+      if (Seed != null) s.Write(Seed, 0, Seed.Length);
     }
 
-    public static PfsHeader ReadFromStream(System.IO.Stream s)
+    public static PfsHeader ReadFromStream(Stream s)
     {
-      var start = s.Position;
-      var hdr = new PfsHeader
+      var pfsHdr = new PfsHeader
       {
         Version          = s.ReadInt64LE(),
         Magic            = s.ReadInt64LE(),
@@ -107,16 +101,19 @@ namespace LibOrbisPkg.PFS
         DinodeCount      = s.ReadInt64LE(),
         Ndblock          = s.ReadInt64LE(),
         DinodeBlockCount = s.ReadInt64LE(),
+        Skip64bitZero    = s.ReadInt64LE(),             // skip a 64-bit zero
+        InodeBlockSig    = DinodeS64.ReadFromStream(s), // size: 0x310
+        Unk_0x360        = s.ReadInt64LE(),             // Position 0x360
       };
-      s.Position += 8; // skip a 64-bit zero
-      hdr.InodeBlockSig = DinodeS64.ReadFromStream(s);
-      if (hdr.Version != 1 || hdr.Magic != 0x1332A0B) //20130315=0x1332A0B
+      if (pfsHdr.Version != 1 || pfsHdr.Magic != 0x1332A0B) //20130315=0x1332A0B
       {
-        throw new InvalidDataException($"Invalid PFS superblock version ({hdr.Version.ToString("X")}) or magic ({hdr.Magic.ToString("X")}), expected version: 1 and magic: 0x1332A0B");
+        throw new InvalidDataException($"Invalid PFS superblock version ({pfsHdr.Version.ToString("X")}) or magic ({pfsHdr.Magic.ToString("X")}), expected version: 1 and magic: 0x1332A0B");
       }
-      s.Position = start + 0x370;
-      hdr.Seed = s.ReadBytes(16);
-      return hdr;
+      pfsHdr.UnkSeedIndex = pfsHdr.Mode.HasFlag(PfsMode.Signed) ? s.ReadInt32LE() : 0;
+      pfsHdr.Unk_Index    = s.ReadInt32LE();
+      pfsHdr.Seed         = pfsHdr.Mode.HasFlag(PfsMode.Signed) ? s.ReadBytes(16) : new byte[16];
+
+      return pfsHdr;
     }
   }
 
@@ -126,17 +123,17 @@ namespace LibOrbisPkg.PFS
   [Flags]
   public enum InodeMode : ushort
   {
-    o_read = 1,
-    o_write = 2,
+    o_read    = 1,
+    o_write   = 2,
     o_execute = 4,
-    g_read = 8,
-    g_write = 16,
+    g_read    = 8,
+    g_write   = 16,
     g_execute = 32,
-    u_read = 64,
-    u_write = 128,
+    u_read    = 64,
+    u_write   = 128,
     u_execute = 256,
-    dir = 16384,
-    file = 32768,
+    dir       = 16384,
+    file      = 32768,
   }
 
   /// <summary>
@@ -146,23 +143,23 @@ namespace LibOrbisPkg.PFS
   public enum InodeFlags : uint
   {
     compressed = 0x1,
-    unk1 = 0x2,
-    unk2 = 0x4,
-    unk3 = 0x8,
-    @readonly = 0x10,
-    unk4 = 0x20,
-    unk5 = 0x40,
-    unk6 = 0x80,
-    unk7 = 0x100,
-    unk8 = 0x200,
-    unk9 = 0x400,
-    unk10 = 0x800,
-    unk11 = 0x1000,
-    unk12 = 0x2000,
-    unk13 = 0x4000,
-    unk14 = 0x8000,
-    unk15 = 0x10000,
-    @internal = 0x20000
+    unk1       = 0x2,
+    unk2       = 0x4,
+    unk3       = 0x8,
+    @readonly  = 0x10,
+    unk4       = 0x20,
+    unk5       = 0x40,
+    unk6       = 0x80,
+    unk7       = 0x100,
+    unk8       = 0x200,
+    unk9       = 0x400,
+    unk10      = 0x800,
+    unk11      = 0x1000,
+    unk12      = 0x2000,
+    unk13      = 0x4000,
+    unk14      = 0x8000,
+    unk15      = 0x10000,
+    @internal  = 0x20000
   }
 
   /// <summary>

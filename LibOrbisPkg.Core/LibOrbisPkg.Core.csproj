@@ -30,7 +30,6 @@
     <Compile Include="..\LibOrbisPkg\PFS\FSTree.cs" Link="PFS\FSTree.cs" />
     <Compile Include="..\LibOrbisPkg\PFS\PFSBuilder.cs" Link="PFS\PFSBuilder.cs" />
     <Compile Include="..\LibOrbisPkg\PFS\PFSCReader.cs" Link="PFS\PFSCReader.cs" />
-    <Compile Include="..\LibOrbisPkg\PFS\PFSCWriter.cs" Link="PFS\PFSCWriter.cs" />
     <Compile Include="..\LibOrbisPkg\PFS\PfsProperties.cs" Link="PFS\PfsProperties.cs" />
     <Compile Include="..\LibOrbisPkg\PFS\PfsReader.cs" Link="PFS\PfsReader.cs" />
     <Compile Include="..\LibOrbisPkg\PFS\PfsStructs.cs" Link="PFS\PfsStructs.cs" />

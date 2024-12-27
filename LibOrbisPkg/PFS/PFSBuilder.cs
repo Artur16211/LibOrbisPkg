@@ -17,7 +17,7 @@ namespace LibOrbisPkg.PFS
     static int CeilDiv(int a, int b) => a / b + (a % b == 0 ? 0 : 1);
     static long CeilDiv(long a, long b) => a / b + (a % b == 0 ? 0 : 1);
 
-    private PfsHeader hdr;
+    private PfsHeader pfsHdr;
     private List<Inode> inodes;
     private List<PfsDirent> super_root_dirents;
 
@@ -69,10 +69,7 @@ namespace LibOrbisPkg.PFS
     /// Computes the final size of this image as it will be written to disk.
     /// </summary>
     /// <returns>PFS Image size</returns>
-    public long CalculatePfsSize()
-    {
-      return hdr.Ndblock * hdr.BlockSize;
-    }
+    public long CalculatePfsSize() => pfsHdr.Ndblock * pfsHdr.BlockSize;
 
     /// <summary>
     /// This gets called by the constructor.
@@ -84,13 +81,13 @@ namespace LibOrbisPkg.PFS
 
       // Insert header digest to be calculated with the rest of the digests
       final_sigs.Push(new BlockSigInfo(0, 0x380, 0x5A0));
-      hdr = new PfsHeader {
+      pfsHdr = new PfsHeader {
         BlockSize = properties.BlockSize,
         ReadOnly = 1,
-        Mode = (properties.Sign ? PfsMode.Signed : 0) 
+        Mode = (properties.Sign ? PfsMode.Signed : 0)
              | (properties.Encrypt ? PfsMode.Encrypted : 0)
              | PfsMode.UnknownFlagAlwaysSet,
-        UnknownIndex = 1,
+        Unk_Index = 1,
         Seed = properties.Encrypt || properties.Sign ? properties.Seed : null
       };
       inodes = new List<Inode>();
@@ -118,7 +115,7 @@ namespace LibOrbisPkg.PFS
     private void WriteData(Stream stream)
     {
       Log("Writing data...");
-      hdr.WriteToStream(stream);
+      pfsHdr.WriteToStream(stream);
       WriteInodes(stream);
       WriteSuperrootDirents(stream);
 
@@ -137,7 +134,7 @@ namespace LibOrbisPkg.PFS
       for (var x = 0; x < allNodes.Count; x++)
       {
         var f = allNodes[x];
-        stream.Position = f.ino.StartBlock * hdr.BlockSize;
+        stream.Position = f.ino.StartBlock * pfsHdr.BlockSize;
         WriteFSNode(stream, f);
       }
     }
@@ -177,13 +174,14 @@ namespace LibOrbisPkg.PFS
       }
       using (var view = file.CreateViewAccessor(offset, CalculatePfsSize(), MemoryMappedFileAccess.ReadWrite))
       {
-        if (hdr.Mode.HasFlag(PfsMode.Signed))
+        if (pfsHdr.Mode.HasFlag(PfsMode.Signed))
         {
           Log("Signing in parallel...");
-          var signKey = Crypto.PfsGenSignKey(properties.EKPFS, hdr.Seed);
+          var signKey = Crypto.PfsGenSignKey(properties.EKPFS, pfsHdr.Seed);
           // We can do the actual data blocks in parallel
           Parallel.ForEach(
             data_sigs,
+            new ParallelOptions { MaxDegreeOfParallelism = 10 },
             () => Tuple.Create(new byte[properties.BlockSize], new HMACSHA256(signKey)),
             (sig, status, local) =>
             {
@@ -209,13 +207,14 @@ namespace LibOrbisPkg.PFS
           Log(40); //Returning the current execution progress: 40%, PfsBuilder(WriteImage) => PkgBuilder(Write) => GP4View(BuildPkg)
         }
 
-        if (hdr.Mode.HasFlag(PfsMode.Encrypted))
+        if (pfsHdr.Mode.HasFlag(PfsMode.Encrypted))
         {
           Log("Encrypting in parallel...");
-          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed, newCrypt);
+          (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, pfsHdr.Seed, newCrypt);
           Parallel.ForEach(
             // generates sector indices for each sector to be encrypted
             XtsSectorGen(),
+            new ParallelOptions { MaxDegreeOfParallelism = 10 },
             // generates thread-local data
             () => Tuple.Create(new XtsBlockTransform(dataKey, tweakKey), new byte[xtsSectorSize]),
             // Loop body
@@ -241,10 +240,10 @@ namespace LibOrbisPkg.PFS
     {
       WriteData(stream);
 
-      if (hdr.Mode.HasFlag(PfsMode.Signed))
+      if (pfsHdr.Mode.HasFlag(PfsMode.Signed))
       {
         Log("Signing...");
-        var signKey = Crypto.PfsGenSignKey(properties.EKPFS, hdr.Seed);
+        var signKey = Crypto.PfsGenSignKey(properties.EKPFS, pfsHdr.Seed);
         foreach (var sig in data_sigs.Concat(final_sigs))
         {
           var sig_buffer = new byte[sig.Size];
@@ -256,10 +255,10 @@ namespace LibOrbisPkg.PFS
         }
       }
 
-      if (hdr.Mode.HasFlag(PfsMode.Encrypted))
+      if (pfsHdr.Mode.HasFlag(PfsMode.Encrypted))
       {
         Log("Encrypting...");
-        (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, hdr.Seed, newCrypt);
+        (byte[] tweakKey, byte[] dataKey) = Crypto.PfsGenEncKey(properties.EKPFS, pfsHdr.Seed, newCrypt);
         var transformer = new XtsBlockTransform(dataKey, tweakKey);
         byte[] sectorBuffer = new byte[xtsSectorSize];
         foreach (var xtsSector in XtsSectorGen())
@@ -315,7 +314,7 @@ namespace LibOrbisPkg.PFS
           Size: file.Size,
           SizeCompressed: file.CompressedSize,
           Number: (uint)inodes.Count,
-          Blocks: (uint)CeilDiv(file.Size, hdr.BlockSize),
+          Blocks: (uint)CeilDiv(file.Size, pfsHdr.BlockSize),
           Flags: InodeFlags.@readonly | (file.Compress ? InodeFlags.compressed : 0)
         );
         if (properties.Sign) // HACK: Outer PFS images don't use readonly?
@@ -329,11 +328,11 @@ namespace LibOrbisPkg.PFS
       }
     }
 
-    long roundUpSizeToBlock(long size) => CeilDiv(size, hdr.BlockSize) * hdr.BlockSize;
+    long roundUpSizeToBlock(long size) => CeilDiv(size, pfsHdr.BlockSize) * pfsHdr.BlockSize;
     long calculateIndirectBlocks(long size)
     {
-      var sigs_per_block = hdr.BlockSize / 36;
-      var blocks = CeilDiv(size, hdr.BlockSize);
+      var sigs_per_block = pfsHdr.BlockSize / 36;
+      var blocks = CeilDiv(size, pfsHdr.BlockSize);
       var ib = 0L;
       if (blocks > 12)
       {
@@ -352,7 +351,7 @@ namespace LibOrbisPkg.PFS
     ///Given an inode number and an index into the db[] array, returns the absolute offset of that array value
     ///</summary>
     long inoNumberToOffset(uint number, int db = 0)
-      => hdr.BlockSize + (DinodeS32.SizeOf * number) + 0x64 + (36 * db);
+      => pfsHdr.BlockSize + (DinodeS32.SizeOf * number) + 0x64 + (36 * db);
 
     /// <summary>
     /// Sets the data blocks. Also updates header for total number of data blocks.
@@ -363,53 +362,53 @@ namespace LibOrbisPkg.PFS
       if (properties.Sign)
       {
         // Include the header block in the total count
-        hdr.Ndblock = 1;
-        var inodesPerBlock = hdr.BlockSize / DinodeS32.SizeOf;
-        hdr.DinodeCount = inodes.Count;
-        hdr.DinodeBlockCount = CeilDiv(inodes.Count, inodesPerBlock);
-        hdr.InodeBlockSig.Blocks = (uint)hdr.DinodeBlockCount;
-        hdr.InodeBlockSig.Size = hdr.DinodeBlockCount * hdr.BlockSize;
-        hdr.InodeBlockSig.SizeCompressed = hdr.DinodeBlockCount * hdr.BlockSize;
-        hdr.InodeBlockSig.SetTime(properties.FileTime);
-        hdr.InodeBlockSig.Flags = 0;
-        for (var i = 0; i < hdr.DinodeBlockCount; i++)
+        pfsHdr.Ndblock = 1;
+        var inodesPerBlock = pfsHdr.BlockSize / DinodeS32.SizeOf;
+        pfsHdr.DinodeCount = inodes.Count;
+        pfsHdr.DinodeBlockCount = CeilDiv(inodes.Count, inodesPerBlock);
+        pfsHdr.InodeBlockSig.Blocks = (uint)pfsHdr.DinodeBlockCount;
+        pfsHdr.InodeBlockSig.Size = pfsHdr.DinodeBlockCount * pfsHdr.BlockSize;
+        pfsHdr.InodeBlockSig.SizeCompressed = pfsHdr.DinodeBlockCount * pfsHdr.BlockSize;
+        pfsHdr.InodeBlockSig.SetTime(properties.FileTime);
+        pfsHdr.InodeBlockSig.Flags = 0;
+        for (var i = 0; i < pfsHdr.DinodeBlockCount; i++)
         {
-          hdr.InodeBlockSig.SetDirectBlock(i, 1 + i);
+          pfsHdr.InodeBlockSig.SetDirectBlock(i, 1 + i);
           final_sigs.Push(new BlockSigInfo(1 + i, 0xB8 + (36 * i)));
         }
-        hdr.Ndblock += hdr.DinodeBlockCount;
-        super_root_ino.SetDirectBlock(0, (int)(hdr.DinodeBlockCount + 1));
+        pfsHdr.Ndblock += pfsHdr.DinodeBlockCount;
+        super_root_ino.SetDirectBlock(0, (int)(pfsHdr.DinodeBlockCount + 1));
         final_sigs.Push(new BlockSigInfo(super_root_ino.StartBlock, inoNumberToOffset(super_root_ino.Number)));
-        hdr.Ndblock += super_root_ino.Blocks;
+        pfsHdr.Ndblock += super_root_ino.Blocks;
 
         // flat path table
         fpt_ino.SetDirectBlock(0, super_root_ino.StartBlock + 1);
         fpt_ino.Size = fpt.Size;
         fpt_ino.SizeCompressed = fpt.Size;
-        fpt_ino.Blocks = (uint)CeilDiv(fpt.Size, hdr.BlockSize);
+        fpt_ino.Blocks = (uint)CeilDiv(fpt.Size, pfsHdr.BlockSize);
         final_sigs.Push(new BlockSigInfo(fpt_ino.StartBlock, inoNumberToOffset(fpt_ino.Number)));
 
         for (int i = 1; i < fpt_ino.Blocks && i < 12; i++)
         {
-          fpt_ino.SetDirectBlock(i, (int)hdr.Ndblock++);
+          fpt_ino.SetDirectBlock(i, (int)pfsHdr.Ndblock++);
           final_sigs.Push(new BlockSigInfo(fpt_ino.StartBlock, inoNumberToOffset(fpt_ino.Number, i)));
         }
 
         // DATs I've found include an empty block after the FPT
-        hdr.Ndblock++;
+        pfsHdr.Ndblock++;
         // HACK: outer PFS has a block of zeroes that is not encrypted???
-        emptyBlock = (int)hdr.Ndblock;
-        hdr.Ndblock++;
+        emptyBlock = (int)pfsHdr.Ndblock;
+        pfsHdr.Ndblock++;
 
-        var ibStartBlock = hdr.Ndblock;
-        hdr.Ndblock += allNodes.Select(s => calculateIndirectBlocks(s.Size)).Sum();
+        var ibStartBlock = pfsHdr.Ndblock;
+        pfsHdr.Ndblock += allNodes.Select(s => calculateIndirectBlocks(s.Size)).Sum();
 
-        var sigs_per_block = hdr.BlockSize / 36;
+        var sigs_per_block = pfsHdr.BlockSize / 36;
         // Fill in DB/IB pointers
         foreach (var n in allNodes)
         {
-          var blocks = CeilDiv(n.Size, hdr.BlockSize);
-          n.ino.SetDirectBlock(0, (int)hdr.Ndblock);
+          var blocks = CeilDiv(n.Size, pfsHdr.BlockSize);
+          n.ino.SetDirectBlock(0, (int)pfsHdr.Ndblock);
           n.ino.Blocks = (uint)blocks;
           n.ino.Size = n is FSDir ? roundUpSizeToBlock(n.Size) : n.Size;
           if (n.ino.SizeCompressed == 0)
@@ -417,7 +416,7 @@ namespace LibOrbisPkg.PFS
 
           for (var i = 0; (blocks - i) > 0 && i < 12; i++)
           {
-            data_sigs.Push(new BlockSigInfo((int)hdr.Ndblock++, inoNumberToOffset(n.ino.Number, i)));
+            data_sigs.Push(new BlockSigInfo((int)pfsHdr.Ndblock++, inoNumberToOffset(n.ino.Number, i)));
           }
           if(blocks > 12)
           {
@@ -427,7 +426,7 @@ namespace LibOrbisPkg.PFS
             for(int i = 12, pointerOffset = 0; (blocks - i) > 0 && i < (12 + sigs_per_block); i++, pointerOffset += 36)
             {
               // ib[0][i]
-              data_sigs.Push(new BlockSigInfo((int)hdr.Ndblock++, ibStartBlock * hdr.BlockSize + pointerOffset));
+              data_sigs.Push(new BlockSigInfo((int)pfsHdr.Ndblock++, ibStartBlock * pfsHdr.BlockSize + pointerOffset));
             }
             ibStartBlock++;
           }
@@ -441,11 +440,11 @@ namespace LibOrbisPkg.PFS
             for(var i = 0; i < sigs_per_block && blockSigsDone < blocks; i++)
             {
               // ib[1][i] = signature for block of signatures for data blocks
-              final_sigs.Push(new BlockSigInfo((int)++ibStartBlock, ib_1_block * hdr.BlockSize + i*36));
+              final_sigs.Push(new BlockSigInfo((int)++ibStartBlock, ib_1_block * pfsHdr.BlockSize + i*36));
               for (int j = 0; j < sigs_per_block && blockSigsDone < blocks; j++, blockSigsDone++)
               {
                 // ib[1][i][j] = signature for data block
-                data_sigs.Push(new BlockSigInfo((int)hdr.Ndblock++, ibStartBlock * hdr.BlockSize + (j*36)));
+                data_sigs.Push(new BlockSigInfo((int)pfsHdr.Ndblock++, ibStartBlock * pfsHdr.BlockSize + (j*36)));
               }
             }
           }
@@ -454,55 +453,55 @@ namespace LibOrbisPkg.PFS
       else
       {
         // Include the header block in the total count
-        hdr.Ndblock = 1;
-        var inodesPerBlock = hdr.BlockSize / DinodeD32.SizeOf;
-        hdr.DinodeCount = inodes.Count;
-        hdr.DinodeBlockCount = CeilDiv(inodes.Count, inodesPerBlock);
-        hdr.InodeBlockSig.Blocks = (uint)hdr.DinodeBlockCount;
-        hdr.InodeBlockSig.Size = hdr.DinodeBlockCount * hdr.BlockSize;
-        hdr.InodeBlockSig.SizeCompressed = hdr.DinodeBlockCount * hdr.BlockSize;
-        hdr.InodeBlockSig.SetDirectBlock(0, (int)hdr.Ndblock++);
-        hdr.InodeBlockSig.SetTime(properties.FileTime);
-        for (var i = 1; i < hdr.DinodeBlockCount; i++)
+        pfsHdr.Ndblock = 1;
+        var inodesPerBlock = pfsHdr.BlockSize / DinodeD32.SizeOf;
+        pfsHdr.DinodeCount = inodes.Count;
+        pfsHdr.DinodeBlockCount = CeilDiv(inodes.Count, inodesPerBlock);
+        pfsHdr.InodeBlockSig.Blocks = (uint)pfsHdr.DinodeBlockCount;
+        pfsHdr.InodeBlockSig.Size = pfsHdr.DinodeBlockCount * pfsHdr.BlockSize;
+        pfsHdr.InodeBlockSig.SizeCompressed = pfsHdr.DinodeBlockCount * pfsHdr.BlockSize;
+        pfsHdr.InodeBlockSig.SetDirectBlock(0, (int)pfsHdr.Ndblock++);
+        pfsHdr.InodeBlockSig.SetTime(properties.FileTime);
+        for (var i = 1; i < pfsHdr.DinodeBlockCount; i++)
         {
           if(i < 12)
-            hdr.InodeBlockSig.SetDirectBlock(i, -1);
-          hdr.Ndblock++;
+            pfsHdr.InodeBlockSig.SetDirectBlock(i, -1);
+          pfsHdr.Ndblock++;
         }
-        super_root_ino.SetDirectBlock(0, (int)hdr.Ndblock);
-        hdr.Ndblock += super_root_ino.Blocks;
+        super_root_ino.SetDirectBlock(0, (int)pfsHdr.Ndblock);
+        pfsHdr.Ndblock += super_root_ino.Blocks;
 
         // flat path table
-        fpt_ino.SetDirectBlock(0, (int)hdr.Ndblock++);
+        fpt_ino.SetDirectBlock(0, (int)pfsHdr.Ndblock++);
         fpt_ino.Size = fpt.Size;
         fpt_ino.SizeCompressed = fpt.Size;
-        fpt_ino.Blocks = (uint)CeilDiv(fpt.Size, hdr.BlockSize);
+        fpt_ino.Blocks = (uint)CeilDiv(fpt.Size, pfsHdr.BlockSize);
 
         for (int i = 1; i < fpt_ino.Blocks && i < 12; i++)
-          fpt_ino.SetDirectBlock(i, (int)hdr.Ndblock++);
+          fpt_ino.SetDirectBlock(i, (int)pfsHdr.Ndblock++);
 
         // DATs I've found include an empty block after the FPT if there's no collision resolver
         if(cr_ino == null)
         {
-          hdr.Ndblock++;
+          pfsHdr.Ndblock++;
         }
         else
         {
           // collision resolver
-          cr_ino.SetDirectBlock(0, (int)hdr.Ndblock++);
+          cr_ino.SetDirectBlock(0, (int)pfsHdr.Ndblock++);
           cr_ino.Size = colResolver.Size;
           cr_ino.SizeCompressed = colResolver.Size;
-          cr_ino.Blocks = (uint)CeilDiv(colResolver.Size, hdr.BlockSize);
+          cr_ino.Blocks = (uint)CeilDiv(colResolver.Size, pfsHdr.BlockSize);
 
           for (int i = 1; i < cr_ino.Blocks && i < 12; i++)
-            cr_ino.SetDirectBlock(i, (int)hdr.Ndblock++);
+            cr_ino.SetDirectBlock(i, (int)pfsHdr.Ndblock++);
         }
 
         // Calculate length of all dirent blocks
         foreach (var n in allNodes)
         {
-          var blocks = CeilDiv(n.Size, hdr.BlockSize);
-          n.ino.SetDirectBlock(0, (int)hdr.Ndblock);
+          var blocks = CeilDiv(n.Size, pfsHdr.BlockSize);
+          n.ino.SetDirectBlock(0, (int)pfsHdr.Ndblock);
           n.ino.Blocks = (uint)blocks;
           n.ino.Size = n is FSDir ? roundUpSizeToBlock(n.Size) : n.Size;
           if(n.ino.SizeCompressed == 0)
@@ -511,11 +510,11 @@ namespace LibOrbisPkg.PFS
           {
             n.ino.SetDirectBlock(i, -1);
           }
-          hdr.Ndblock += blocks;
+          pfsHdr.Ndblock += blocks;
         }
       }
       // Hack: set a minimum size for the PFS image.
-      hdr.Ndblock = Math.Max(hdr.Ndblock, properties.MinBlocks);
+      pfsHdr.Ndblock = Math.Max(pfsHdr.Ndblock, properties.MinBlocks);
     }
 
     Inode MakeInode(InodeMode Mode, uint Blocks, long Size = 0, long SizeCompressed = 0, ushort Nlink = 1, uint Number = 0, InodeFlags Flags = 0)
@@ -625,13 +624,13 @@ namespace LibOrbisPkg.PFS
     /// <param name="s"></param>
     void WriteInodes(Stream s)
     {
-      s.Position = hdr.BlockSize;
+      s.Position = pfsHdr.BlockSize;
       foreach (var di in inodes)
       {
         di.WriteToStream(s);
-        if (s.Position % hdr.BlockSize > hdr.BlockSize - (properties.Sign ? DinodeS32.SizeOf : DinodeD32.SizeOf))
+        if (s.Position % pfsHdr.BlockSize > pfsHdr.BlockSize - (properties.Sign ? DinodeS32.SizeOf : DinodeD32.SizeOf))
         {
-          s.Position += hdr.BlockSize - (s.Position % hdr.BlockSize);
+          s.Position += pfsHdr.BlockSize - (s.Position % pfsHdr.BlockSize);
         }
       }
     }
@@ -642,7 +641,7 @@ namespace LibOrbisPkg.PFS
     /// <param name="stream"></param>
     void WriteSuperrootDirents(Stream stream)
     {
-      stream.Position = hdr.BlockSize * (hdr.DinodeBlockCount + 1);
+      stream.Position = pfsHdr.BlockSize * (pfsHdr.DinodeBlockCount + 1);
       foreach (var d in super_root_dirents)
       {
         d.WriteToStream(stream);
@@ -662,9 +661,9 @@ namespace LibOrbisPkg.PFS
         foreach (var d in dir.Dirents)
         {
           d.WriteToStream(s);
-          if (s.Position % hdr.BlockSize > hdr.BlockSize - PfsDirent.MaxSize)
+          if (s.Position % pfsHdr.BlockSize > pfsHdr.BlockSize - PfsDirent.MaxSize)
           {
-            s.Position = (++startBlock * hdr.BlockSize);
+            s.Position = (++startBlock * pfsHdr.BlockSize);
           }
         }
       }

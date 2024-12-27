@@ -166,7 +166,7 @@ namespace LibOrbisPkg.GP4
         var inner = new PfsReader(new PFSCReader(pfsImageDat.GetView()));
         // Convert PFS image timestamp from UNIX time and save it in the project
         project.volume.TimeStamp = new DateTime(1970, 1, 1)
-          .AddSeconds(inner.Header.InodeBlockSig.Time1_sec);
+          .AddSeconds(inner.PfsHdr.InodeBlockSig.Time1_sec);
         var uroot = inner.GetURoot();
         Dir dir = null;
         var projectDirs = new Queue<Dir>();

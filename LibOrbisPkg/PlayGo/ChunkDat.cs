@@ -43,42 +43,42 @@ namespace LibOrbisPkg.PlayGo
     {
       var dat = new ChunkDat
       {
-        magic = 0x6f676c70, // 'plgo'
-        version_major = 0x0000,
-        version_minor = 0x0000,
-        image_count = 1,
-        chunk_count = 1,
-        mchunk_count = 1,
-        scenario_count = 1,
-        file_size = 416,
+        magic               = 0x6f676c70, // 'plgo'
+        version_major       = 0x0000,
+        version_minor       = 0x0000,
+        image_count         = 1,
+        chunk_count         = 1,
+        mchunk_count        = 1,
+        scenario_count      = 1,
+        file_size           = 416,
         default_scenario_id = 0,
-        attrib = 1,
-        sdk_ver = 0,
-        disc_count = 0,
-        layer_bmp = 0,
-        reserved = new byte[32].Fill((byte)0xff),
-        content_id = contentId,
-        ChunkAtrrs = new List<ChunkAttr>()
+        attrib              = 1,
+        sdk_ver             = 0,
+        disc_count          = 0,
+        layer_bmp           = 0,
+        reserved            = new byte[32].Fill((byte)0xff),
+        content_id          = contentId,
+        ChunkAtrrs          = new List<ChunkAttr>()
         {
           new ChunkAttr
           {
-            flag = 0x80,
+            flag                = 0x80,
             image_disc_layer_no = 0,
-            req_locus = 3,
-            mchunk_count = 1,
-            language_mask = 0xFFFFFFFFFFFFFFFFUL,
-            mchunks_offset = 0,
-            label_offset = 0
+            req_locus           = 3,
+            mchunk_count        = 1,
+            language_mask       = 0xFFFFFFFFFFFFFFFFUL,
+            mchunks_offset      = 0,
+            label_offset        = 0
           }
         },
         ChunkMchunks = new List<ushort> { 0 },
-        ChunkLabels = new List<string> { "Chunk #0" },
-        MchunkAttrs = new List<MChunkAttr>
+        ChunkLabels  = new List<string> { "Chunk #0" },
+        MchunkAttrs  = new List<MChunkAttr>
         {
           new MChunkAttr
           {
             offset = 0,
-            size = 0, // must update this to outer pfs image size + pfs offset
+            size   = 0, // must update this to outer pfs image size + pfs offset
           }
         },
         InnerMChunkAttrs = new List<MChunkAttr>
@@ -86,18 +86,18 @@ namespace LibOrbisPkg.PlayGo
           new MChunkAttr
           {
             offset = 0,
-            size = 0, // must update this to inner pfs image size
+            size   = 0, // must update this to inner pfs image size
           }
         },
         ScenarioAttrs = new List<ScenarioAttr>
         {
           new ScenarioAttr
           {
-            type = 1,
+            type                = 1,
             initial_chunk_count = 1,
-            chunk_count = 1,
-            chunks_offset = 0,
-            label_offset = 0,
+            chunk_count         = 1,
+            chunks_offset       = 0,
+            label_offset        = 0,
           },
         },
         ScenarioChunks = new List<ushort> { 0 },

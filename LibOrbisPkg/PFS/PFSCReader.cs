@@ -19,7 +19,7 @@ namespace LibOrbisPkg.PFS
     /// Ansi:PFSC
     /// </summary>
     public const int Magic = 0x43534650;
-    public PFSCHdr Hdr { get; private set; }
+    public PFSCHdr PfscHdr { get; private set; }
     public string[] SectorOffsetInfo { get; private set; }
 
     private IMemoryAccessor _accessor;
@@ -38,19 +38,18 @@ namespace LibOrbisPkg.PFS
     public PFSCReader(IMemoryAccessor va)
     {
       _accessor = va;
-      _accessor.Read(0, out PFSCHdr hdr);
-      if (hdr.Magic != Magic)
+      _accessor.Read(0, out PFSCHdr pfscHdr);
+      if (pfscHdr.Magic != Magic)
         throw new ArgumentException("Not a PFSC file: missing PFSC magic");
-      if (hdr.Unk4 != 0)
-        throw new ArgumentException($"Not a PFSC file: unknown data at 0x4 (expected 0, got {hdr.Unk4})");
+      if (pfscHdr.Unk4 != 0)
+        throw new ArgumentException($"Not a PFSC file: unknown data at 0x4 (expected 0, got {pfscHdr.Unk4})");
       //if (hdr.Unk8 != 6)
       //  throw new ArgumentException($"Not a PFSC file: unknown data at 0x8 (expected 6, got {hdr.Unk8})");
-      if (hdr.BlockSz != (int)hdr.BlockSz2)
+      if (pfscHdr.BlockSz != (int)pfscHdr.BlockSz2)
         throw new ArgumentException("Not a PFSC file: block size mismatch");
 
-      var num_blocks = (int)(hdr.DataLength / hdr.BlockSz2);
-      sectorMap = new long[num_blocks + 1];
-      _accessor.ReadArray(hdr.BlockOffsets, sectorMap, 0, num_blocks + 1);
+      sectorMap = new long[(int)pfscHdr.NumBlocks + 1];
+      _accessor.ReadArray(pfscHdr.BlockOffsets, sectorMap, 0, sectorMap.Length);
 
       long tmpOffset = 0;
       SectorOffsetInfo = new string[(sectorMap.Length / 10) + (sectorMap.Length % 10 == 0 ? 0 : 1)];
@@ -66,7 +65,7 @@ namespace LibOrbisPkg.PFS
 
         tmpOffset = sectorOffset;
       }
-      Hdr = hdr;
+      PfscHdr = pfscHdr;
     }
 
     /// <summary>
@@ -77,8 +76,8 @@ namespace LibOrbisPkg.PFS
     {
       if (root == null) return;
 
-      var sectorStart     = (int)(root.offset / Hdr.BlockSz);
-      var sectorEnd       = (int)((root.offset + root.size) / Hdr.BlockSz);
+      var sectorStart     = (int)(root.offset / PfscHdr.BlockSz);
+      var sectorEnd       = (int)((root.offset + root.size) / PfscHdr.BlockSz);
       var sectorOffset    = sectorMap[sectorStart];
       var sectorOffsetEnd = sectorMap[sectorEnd];
 
@@ -94,8 +93,8 @@ namespace LibOrbisPkg.PFS
 
       foreach (var node in root.GetAllNodes())
       {
-        sectorStart     = (int)(node.offset / Hdr.BlockSz);
-        sectorEnd = (int)((node.offset + node.size) / Hdr.BlockSz);
+        sectorStart  = (int)(node.offset / PfscHdr.BlockSz);
+        sectorEnd    = (int)((node.offset + node.size) / PfscHdr.BlockSz);
         sectorOffset = sectorMap[sectorStart];
         if (sectorStart == sectorEnd || (node is PfsReader.Dir && sectorEnd - sectorStart == 1))
         {
@@ -124,7 +123,7 @@ namespace LibOrbisPkg.PFS
     public PFSCReader(IMemoryReader r) : this(new MemoryAccessor(r))
     { }
 
-    public int SectorSize => Hdr.BlockSz;
+    public int SectorSize => PfscHdr.BlockSz;
     
     /// <summary>
     /// Reads the sector at the given index into the given byte array.
@@ -139,14 +138,14 @@ namespace LibOrbisPkg.PFS
       var sectorOffset = sectorMap[idx];
       var sectorSize = sectorMap[idx + 1] - sectorOffset;
 
-      if (sectorSize == Hdr.BlockSz2)
+      if (sectorSize == PfscHdr.BlockSz2)
       {
         // fast case: uncompressed sector
-        _accessor.Read(sectorOffset, output, 0, Hdr.BlockSz);
+        _accessor.Read(sectorOffset, output, 0, PfscHdr.BlockSz);
       }
-      else if (sectorSize > Hdr.BlockSz2)
+      else if (sectorSize > PfscHdr.BlockSz2)
       {
-        Array.Clear(output, 0, Hdr.BlockSz);
+        Array.Clear(output, 0, PfscHdr.BlockSz);
       }
       else
       {
@@ -184,14 +183,14 @@ namespace LibOrbisPkg.PFS
     /// <exception cref="ArgumentException"></exception>
     private void Read(long src, long count, Action<byte[],int,int> Write)
     {
-      if (src + count > Hdr.DataLength)
+      if (src + count > PfscHdr.DataLength)
         throw new ArgumentException("Attempt to read beyond end of file");
-      var sectorSize = Hdr.BlockSz;
+      var sectorSize = PfscHdr.BlockSz;
       var sectorBuffer = new byte[sectorSize];
       var currentSector = (int)(src / sectorSize);
       var offsetIntoSector = (int)(src - (sectorSize * currentSector));
       ReadSector(currentSector, sectorBuffer);
-      while (count > 0 && src < Hdr.DataLength)
+      while (count > 0 && src < PfscHdr.DataLength)
       {
         if (offsetIntoSector >= sectorSize)
         {
@@ -238,28 +237,77 @@ namespace LibOrbisPkg.PFS
       });
     }
 
-    public void Dispose()
+    public void Dispose() => _accessor.Dispose();
+  }
+
+
+  /// <summary>
+  /// PFSC Header
+  /// NumBlocks = CEIL(PfscSize / BlockSz)
+  /// 0x000 : PFSC Magic (4 bytes)
+  /// 0x004 : Unknown (8 bytes)
+  /// 0x00C : Block Size (4 bytes)
+  /// 0x010 : Block Size (8 bytes)
+  /// 0x018 : Block offsets pointer (4 bytes)
+  /// 0x020 : Data start (8 bytes)
+  /// 0x028 : Data length (8 bytes)
+  /// 0x400 : Blocks (8 bytes * NumBlocks)
+  /// 0x10000 : Data (variable)
+  /// </summary>
+  [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x30)]
+  public readonly struct PFSCHdr
+  {
+    /// <summary>
+    /// Ansi:PFSC／BigEndian:0x50465343／LittleEndian:0x43534650
+    /// </summary>
+    public readonly int Magic;
+    public readonly int Unk4;
+    /// <summary>
+    /// The Unk8 in PFSC's Header is 6 when the PKG is uncompressed, and 2 if it is compressed.
+    /// </summary>
+    public readonly int Unk8;
+    public readonly int BlockSz;
+    public readonly long BlockSz2;
+    public readonly long BlockOffsets;
+    public readonly long DataStart;
+    public readonly long DataLength;
+
+    // The following fields are not Struct Layout data.
+    public long NumBlocks => DataLength / BlockSz;
+    public long PfscSize => (NumBlocks * BlockSz) + 1 - BlockSz;
+
+    public PFSCHdr(long pfscSize, int blockSize = 0x10000, bool compressed = false)
     {
-      _accessor.Dispose();
+      Magic = 0x43534650;
+      Unk4 = 0;
+      Unk8 = compressed ? 2 : 6;
+      BlockSz = blockSize;
+      BlockSz2 = blockSize;
+      BlockOffsets = 0x400L;
+
+      var numBlocks = (pfscSize + blockSize - 1) / blockSize;
+      var pointerTableSize = 8 + numBlocks * 8;
+      var additionalPointerBlocks = ((pointerTableSize - 0xFC00) + 0xFFFF) / 0x10000;
+      DataStart = 0x10000 + (additionalPointerBlocks > 0 ? blockSize * additionalPointerBlocks : 0);
+      DataLength = numBlocks * blockSize;
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x30)]
-    public struct PFSCHdr
+    public void WriteToStream(Stream s)
     {
-      /// <summary>
-      /// Ansi:PFSC／BigEndian:0x50465343／LittleEndian:0x43534650
-      /// </summary>
-      public int Magic;
-      public int Unk4;
-      /// <summary>
-      /// The Unk8 in PFSC's Header is 6 when the PKG is uncompressed, and 2 if it is compressed.
-      /// </summary>
-      public int Unk8;
-      public int BlockSz;
-      public long BlockSz2;
-      public long BlockOffsets;
-      public ulong DataStart;
-      public long DataLength;
+      s.WriteInt32LE(Magic);
+      s.WriteLE(Unk4);
+      s.WriteLE(Unk8);
+      s.WriteLE(BlockSz);
+      s.WriteLE(BlockSz2);
+      s.WriteLE(BlockOffsets);
+      s.WriteLE(DataStart);
+      s.WriteLE(DataLength);
+      s.Position += BlockOffsets - 0x30;
+      for (long i = 0; i <= NumBlocks; i++)
+      { // SectorMap
+        s.WriteLE(DataStart + (i * BlockSz));
+      }
+      s.Position += DataStart - BlockOffsets - (NumBlocks + 1) * 8;
     }
   }
 }
