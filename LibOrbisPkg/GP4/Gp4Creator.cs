@@ -7,7 +7,7 @@ using LibOrbisPkg.PFS;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using LibOrbisPkg.Util;
-using System.Threading.Tasks;
+//using System.Threading.Tasks;
 
 namespace LibOrbisPkg.GP4
 {
@@ -32,8 +32,7 @@ namespace LibOrbisPkg.GP4
       EntryId.PLAYGO_MANIFEST_XML,
     };
 
-    public static async Task<bool> CreateProjectFromPKG(string outputDir, MemoryMappedFile pkgFile, string passcode = null, bool decryptEntry = true, 
-      System.Diagnostics.Stopwatch tickerMajor = null, IProgress<(int percent, string message)> progress = null) => await Task.Run(() =>
+    public static void CreateProjectFromPKG(string outputDir, MemoryMappedFile pkgFile, string passcode = null, bool decryptEntry = true)
     {
       Directory.CreateDirectory(outputDir);
       Pkg pkg;
@@ -95,10 +94,10 @@ namespace LibOrbisPkg.GP4
         using (var s = pkgFile.CreateViewStream(meta.DataOffset, meta.DataSize, MemoryMappedFileAccess.Read))
         using (var entryFile = File.Create(filename))
         {
-          int percent = (int)(currSize * 100 / pkgSize);
-          string message = string.Format("{0}% Exporting {1}({2}MB)... Size:{3}/{4}MB, Count:{5}/{6}", percent, entryPath, s.Length / 1024 / 1024, currSize / 1024 / 1024, pkgSize / 1024 / 1024, currCnt, totCnt);
-          if (tickerMajor != null) message += string.Format(" elapsed:{0:0.00}s", tickerMajor.Elapsed.TotalSeconds);
-          progress?.Report((percent, message));
+          //int percent = (int)(currSize * 100 / pkgSize);
+          //string message = string.Format("{0}% Exporting {1}({2}MB)... Size:{3}/{4}MB, Count:{5}/{6}", percent, entryPath, s.Length / 1024 / 1024, currSize / 1024 / 1024, pkgSize / 1024 / 1024, currCnt, totCnt);
+          //if (tickerMajor != null) message += string.Format(" elapsed:{0:0.00}s", tickerMajor.Elapsed.TotalSeconds);
+          //progress?.Report((percent, message));
 
           if (decryptEntry && meta.Encrypted && (passcode != null || meta.KeyIndex == 3))
           {
@@ -197,9 +196,9 @@ namespace LibOrbisPkg.GP4
 
               int percent = (int)(currSize * 100 / pkgSize);
               if (percent > 99) percent = 99;
-              string message = string.Format("{0}% Exporting {1}({2}MB)... Size:{3}/{4}MB, Count:{5}/{6}", percent, path, file.size / 1024 / 1024, currSize / 1024 / 1024, pkgSize / 1024 / 1024, currCnt, totCnt);
-              if (tickerMajor != null) message += string.Format(" elapsed:{0:0.00}s", tickerMajor.Elapsed.TotalSeconds);
-              progress?.Report((percent, message));
+              //string message = string.Format("{0}% Exporting {1}({2}MB)... Size:{3}/{4}MB, Count:{5}/{6}", percent, path, file.size / 1024 / 1024, currSize / 1024 / 1024, pkgSize / 1024 / 1024, currCnt, totCnt);
+              //if (tickerMajor != null) message += string.Format(" elapsed:{0:0.00}s", tickerMajor.Elapsed.TotalSeconds);
+              //progress?.Report((percent, message));
               file.Save(Path.Combine(outputDir, path));
               currSize += file.size;
             }
@@ -211,12 +210,12 @@ namespace LibOrbisPkg.GP4
       // Last step: save the project file
       using (var f = File.Create(Path.Combine(outputDir, "Project.gp4")))
       {
-        progress?.Report((100, "export finish"));
+        //progress?.Report((100, "export finish"));
         Gp4Project.WriteTo(project, f);
       }
 
-      return true;
-    });
+      //return true;
+    }
 
     /// <summary>
     /// Creates a GP4 project in the given output directory from the given pkg
@@ -224,11 +223,11 @@ namespace LibOrbisPkg.GP4
     /// <param name="outputDir">Directory in which to save the project and files</param>
     /// <param name="pkgFilename">Path to the PKG file</param>
     /// <param name="passcode">The PKG's passcode</param>
-    public static async void CreateProjectFromPKG(string outputDir, string pkgFilename, string passcode = null)
+    public static void CreateProjectFromPKG(string outputDir, string pkgFilename, string passcode = null)
     {
       using (var pkgFile = MemoryMappedFile.CreateFromFile(pkgFilename, FileMode.Open))
       {
-        await CreateProjectFromPKG(outputDir, pkgFile, passcode);
+        CreateProjectFromPKG(outputDir, pkgFile, passcode);
       }
     }
 
